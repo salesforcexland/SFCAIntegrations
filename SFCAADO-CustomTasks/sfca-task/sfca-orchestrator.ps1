@@ -9,17 +9,23 @@ Write-Host "Set POST_STATUS_CHECK_TO_PR to: $POST_STATUS_CHECK_TO_PR"
 Write-Host "##vso[task.setvariable variable=POST_STATUS_CHECK_TO_PR]$POST_STATUS_CHECK_TO_PR"
 $env:POST_STATUS_CHECK_TO_PR = $POST_STATUS_CHECK_TO_PR
 
-# Set reusable token
-Write-Host "##vso[task.setvariable variable=SYSTEM_ACCESSTOKEN]$env:SYSTEM_ACCESSTOKEN"
+$EXTENSIONS_TO_SCAN = $env:INPUT_EXTENSIONSTOSCAN
+Write-Host "Set EXTENSIONS_TO_SCAN to: $EXTENSIONS_TO_SCAN"
+Write-Host "##vso[task.setvariable variable=EXTENSIONS_TO_SCAN]$EXTENSIONS_TO_SCAN"
+$env:EXTENSIONS_TO_SCAN = $EXTENSIONS_TO_SCAN
 
-# Set constants / inferred defaults
-$STOP_ON_VIOLATIONS = "true"
-$EXTENSIONS_TO_SCAN = "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+$STOP_ON_VIOLATIONS = $env:INPUT_STOPONVIOLATIONS
+Write-Host "Set STOP_ON_VIOLATIONS to: $STOP_ON_VIOLATIONS"
+Write-Host "##vso[task.setvariable variable=STOP_ON_VIOLATIONS]$STOP_ON_VIOLATIONS"
+$env:STOP_ON_VIOLATIONS = $STOP_ON_VIOLATIONS
+
+# Set reusable token if needed
+Write-Host "##vso[task.setvariable variable=SYSTEM_ACCESSTOKEN]$env:SYSTEM_ACCESSTOKEN"
 
 Write-Host "##vso[task.setvariable variable=STOP_ON_VIOLATIONS]$STOP_ON_VIOLATIONS"
 $env:STOP_ON_VIOLATIONS = $STOP_ON_VIOLATIONS  # ← ensures child scripts receive it
 Write-Host "##vso[task.setvariable variable=EXTENSIONS_TO_SCAN]$EXTENSIONS_TO_SCAN"
-$env:EXTENSIONS_TO_SCAN = $EXTENSIONS_TO_SCAN  # ← Add this line
+$env:EXTENSIONS_TO_SCAN = $EXTENSIONS_TO_SCAN  # ← ensures child scripts receive it
 
 # Step 1 – always run to detect changes and set env var
 . \"$PSScriptRoot/scripts/ScanDeltaFiles.ps1\"
@@ -45,12 +51,16 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
 
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
     if ($VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
-        $failMessage = "❌ Too many violations ($env:totalViolations) found and STOP_ON_VIOLATIONS = true — failing the build."
+        $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
         Write-Host $failMessage
         Write-Host "##vso[task.logissue type=error]$failMessage"
         Write-Host "##vso[task.complete result=Failed;]$failMessage"
     } else {
-        Write-Host "Build passed: either violations are within threshold ($env:totalViolations/$MAXIMUM_VIOLATIONS) or STOP_ON_VIOLATIONS is false."
+        if ($VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -ne "true") {
+            Write-Host "💡 Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+        } else {
+            Write-Host "✅ Build passed: violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) are within the allowed threshold. Passed."
+        }
     }
 } else {
     Write-Host "RELEVANT_FILES_FOUND is false — skipping scan, check, and status tasks"

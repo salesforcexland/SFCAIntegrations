@@ -46,4 +46,6 @@ if ($BUILD_REASON -match 'PullRequest') {
     }
 } else {
     Write-Host "Not a PullRequest build. Skipping diff logic."
+    $env:RELEVANT_FILES_FOUND = "false"
+    Write-Host "##vso[task.setvariable variable=RELEVANT_FILES_FOUND]false"
 }
