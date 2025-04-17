@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "salesforce-code-analyzer-ado-repos-task",
   "name": "Salesforce Code Analyzer PR Task",
-  "version": "0.1.49",
+  "version": "0.2.2",
   "publisher": "SamCrossland",
   "description": "Custom task to run Salesforce Code Analyzer v5 against PR delta files in Azure DevOps.",
   "categories": [ "Azure Pipelines" ],
@@ -45,17 +45,17 @@
   },
   "files": [
     {
-      "path": "sfca-task",
+      "path": "run-salesforce-code-analyzer",
       "addressable": true
     }
   ],
   "contributions": [
     {
-      "id": "sfca-task",
+      "id": "run-salesforce-code-analyzer",
       "type": "ms.vss-distributed-task.task",
       "targets": [ "ms.vss-distributed-task.tasks" ],
       "properties": {
-        "name": "sfca-task"
+        "name": "run-salesforce-code-analyzer"
       }
     }
   ]

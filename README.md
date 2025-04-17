@@ -52,25 +52,33 @@ This allows the task to authenticate against the Azure DevOps API to post the re
 
 ## 🧪 Example Usage
 
-```yaml
+```yaml 
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+pool:
+  vmImage: ubuntu-latest
+
 steps:
+  - checkout: self
+    fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
   - task: UseNode@1
     inputs:
-      version: '22.x'
-    displayName: 'Install Node'
-
+      version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
+      checkLatest: true
+    displayName: 'Install NodeJS'
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.10'
-    displayName: 'Install Python'
-
-  - task: SamCrossland.salesforce-code-analyzer-ado-repos-tasks.sfca-task.sfca-task@0
-    displayName: 'Run Salesforce Code Analyzer PR Scan'
+      versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
+      addToPath: true
+    displayName: 'Ensure Python 3.10+ is Available'
+    
+  - task: run-salesforce-code-analyzer@0 # Call the custom task for SF Code Analyzer analysis
     inputs:
-      maximumViolations: '10'
-      postStatusCheckToPR: 'true'
-    env:
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      maximumViolations: '41'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+      postStatusCheckToPR: false
+      stopOnViolations: true
 ```
 
 ---

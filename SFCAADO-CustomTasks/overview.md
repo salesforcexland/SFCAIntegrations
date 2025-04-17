@@ -18,8 +18,42 @@ This extension runs Salesforce Code Analyzer v5 on the changed files in a pull r
 ## Usage
 
 1. Install this extension in your Azure DevOps organization.
-2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline.
+2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example
 3. Set optional parameters like `maximumViolations` or `postStatusCheckToPR`.
+
+```yaml 
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
+  - task: UseNode@1
+    inputs:
+      version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
+      checkLatest: true
+    displayName: 'Install NodeJS'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
+      addToPath: true
+    displayName: 'Ensure Python 3.10+ is Available'
+    
+  - task: run-salesforce-code-analyzer@0 # Call the custom task for SF Code Analyzer analysis
+    inputs:
+      maximumViolations: '10'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+      postStatusCheckToPR: false
+      stopOnViolations: true
+```
+
+  - If you were to set `postStatusCheckToPR` to be `true`, you need to make sure you pass in the below too so it can leverage your access token:
+```yaml
+    env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
 
 ## Links
 
