@@ -4,6 +4,12 @@ Write-Host "Set MAXIMUM_VIOLATIONS to: $MAXIMUM_VIOLATIONS"
 Write-Host "##vso[task.setvariable variable=MAXIMUM_VIOLATIONS]$MAXIMUM_VIOLATIONS"
 $env:MAXIMUM_VIOLATIONS = $MAXIMUM_VIOLATIONS  # ← export to env for child scripts
 
+# Stub for switching to violation threshold checks in future
+$VIOLATION_THRESHOLD = $env:INPUT_VIOLATIONSTHRESHOLD
+Write-Host "Set VIOLATION_THRESHOLD to: $VIOLATION_THRESHOLD"
+Write-Host "##vso[task.setvariable variable=VIOLATION_THRESHOLD]$VIOLATION_THRESHOLD"
+$env:VIOLATION_THRESHOLD = $VIOLATION_THRESHOLD 
+
 $POST_STATUS_CHECK_TO_PR = $env:INPUT_POSTSTATUSCHECKTOPR
 Write-Host "Set POST_STATUS_CHECK_TO_PR to: $POST_STATUS_CHECK_TO_PR"
 Write-Host "##vso[task.setvariable variable=POST_STATUS_CHECK_TO_PR]$POST_STATUS_CHECK_TO_PR"
@@ -36,10 +42,10 @@ Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
 
 # Step 2 – only proceed if RELEVANT_FILES_FOUND is true
 if ($RELEVANT_FILES_FOUND -eq "true") {
-    . \"$PSScriptRoot/scripts/RunScanner.ps1\"
-    Write-Host "Scanner has been ran - now checking violations"
-    . \"$PSScriptRoot/scripts/CheckViolations.ps1\"
-    Write-Host "Checked the violations - setting whether violations were exceeded"
+    . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
+    #Write-Host "Scanner has been ran - now checking violations" # << Not needed as handling inside 'RunScannerAndAnalyse.ps1' now
+    #. \"$PSScriptRoot/scripts/CheckViolations.ps1\"
+    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded"
     $VIOLATIONS_EXCEEDED = $env:VIOLATIONS_EXCEEDED
 
     if ($POST_STATUS_CHECK_TO_PR -eq "true") {

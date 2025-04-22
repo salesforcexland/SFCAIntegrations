@@ -13,17 +13,9 @@
   "version": {
     "Major": 0,
     "Minor": 1,
-    "Patch": 35
+    "Patch": 42
   },
   "inputs": [
-    {
-      "name": "maximumViolations",
-      "type": "string",
-      "label": "Maximum Allowed Violations",
-      "defaultValue": "10",
-      "required": false,
-      "helpMarkDown": "Maximum number of code violations we would accept before failing the build."
-    },
     {
       "name": "extensionsToScan",
       "type": "string",
@@ -33,12 +25,12 @@
       "helpMarkDown": "Pipe-delimited list of file extensions to include in the scan (e.g., cls|trigger|html)"
     },
     {
-      "name": "postStatusCheckToPR",
-      "type": "boolean",
-      "label": "Post status check to PR (true/false)",
-      "defaultValue": "false",
+      "name": "maximumViolations",
+      "type": "string",
+      "label": "Maximum Allowed Violations",
+      "defaultValue": "10",
       "required": false,
-      "helpMarkDown": "Boolean to dictate whether we POST an extra status check to the source PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+      "helpMarkDown": "Maximum number of code violations we would accept before failing the build."
     },
     {
       "name": "stopOnViolations",
@@ -47,6 +39,38 @@
       "defaultValue": "true",
       "required": false,
       "helpMarkDown": "If true, the build will fail when the number of violations exceeds the threshold."
+    },
+    {
+      "name": "enableSeverityThreshold",
+      "type": "boolean",
+      "label": "Enable severity threshold scanning",
+      "defaultValue": false,
+      "helpMarkDown": "Enable to fail the build based on a minimum severity level instead of a total count."
+    },
+    {
+      "name": "violationsThreshold",
+      "type": "pickList",
+      "label": "Violations Threshold (fail on >=)",
+      "required": false,
+      "defaultValue": "",
+      "helpMarkDown": "Fail the build if any violations meet or exceed this severity. 1 = Info, 5 = Critical.",
+      "options": {
+        "": "None (no severity threshold)",
+        "1": "Info (1)",
+        "2": "Low (2)",
+        "3": "Moderate (3)",
+        "4": "High (4)",
+        "5": "Critical (5)"
+      },
+      "visibleRule": "enableSeverityThreshold = true"
+    },
+    {
+      "name": "postStatusCheckToPR",
+      "type": "boolean",
+      "label": "Post status check to PR (true/false)",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we POST an extra status check to the source PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
     }
   ],
   "execution": {
