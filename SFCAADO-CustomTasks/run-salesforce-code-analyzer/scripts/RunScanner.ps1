@@ -13,7 +13,13 @@ $workspacePath = "$env:BUILD_STAGINGDIRECTORY/**"
 $outputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
 
 Write-Host "Running scan on workspace: $workspacePath"
-sf code-analyzer run --workspace $workspacePath --output-file $outputFilePath
+
+# Run and capture both output and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
+$scanOutput = (& sf code-analyzer run --workspace $workspacePath --output-file $outputFilePath 2>&1 | Out-String).Trim()
+$exitCode = $LASTEXITCODE
+
+Write-Host "Exit code from scanner: $exitCode"
+Write-Host "Raw scanner output:`n$scanOutput"
 
 # 6. Publish the results as a pipeline artifact
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$outputFilePath"

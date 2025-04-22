@@ -85,8 +85,6 @@ steps:
 
 ## 📸 Screenshot
 
-![screenshot](images/screenshot.png)
-
 ---
 
 ## 📚 Resources

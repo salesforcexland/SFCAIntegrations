@@ -1,3 +1,4 @@
+// Intermediate js file needed as PowerShell wouldn't run natively in the task on the ubuntu runner
 const { exec } = require('child_process');
 const path = require('path');
 
