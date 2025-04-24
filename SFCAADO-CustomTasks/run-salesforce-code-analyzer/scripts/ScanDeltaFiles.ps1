@@ -19,8 +19,6 @@ if ($BUILD_REASON -match 'PullRequest') {
     $RelevantFilesForScanning = $changesArray | Where-Object { $_ -match $pattern }
 
     $RelevantFilesFound = if ($RelevantFilesForScanning.Count -gt 0) { "true" } else { "false" }
-    # Set the ADO variable
-    Write-Host "##vso[task.setvariable variable=RELEVANT_FILES_FOUND;isOutput=true]$RelevantFilesFound"
     # Make it available to the core orchestrator and further subprocesses
     $env:RELEVANT_FILES_FOUND = $RelevantFilesFound
     Write-Host "RELEVANT_FILES_FOUND set to: $env:RELEVANT_FILES_FOUND"
@@ -42,5 +40,4 @@ if ($BUILD_REASON -match 'PullRequest') {
 } else {
     Write-Host "Not a PullRequest build. Skipping diff logic."
     $env:RELEVANT_FILES_FOUND = "false"
-    Write-Host "##vso[task.setvariable variable=RELEVANT_FILES_FOUND]false"
 }

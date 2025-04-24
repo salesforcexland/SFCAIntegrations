@@ -1,5 +1,5 @@
 if ($POST_STATUS_CHECK_TO_PR -eq "true" -and -not $env:SYSTEM_ACCESSTOKEN) {
-    Write-Error "Missing SYSTEM_ACCESSTOKEN. Please add 'env: SYSTEM_ACCESSTOKEN: \$(System.AccessToken)' to the task declaration in your pipeline YAML."
+    Write-Error "Missing SYSTEM_ACCESSTOKEN. Please add 'env: SYSTEM_ACCESSTOKEN: '\`$(System.AccessToken)' to the task declaration in your pipeline YAML."
     exit 1
 }
 

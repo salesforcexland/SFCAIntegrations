@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "salesforce-code-analyzer-ado-repos-task",
   "name": "Salesforce Code Analyzer PR Task",
-  "version": "0.2.16",
+  "version": "0.2.25",
   "publisher": "SamCrossland",
   "description": "Custom task to run Salesforce Code Analyzer v5 against PR delta files in Azure DevOps.",
   "categories": [ "Azure Pipelines" ],

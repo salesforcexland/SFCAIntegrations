@@ -13,41 +13,56 @@ $workspacePath = "$env:BUILD_STAGINGDIRECTORY/**"
 $outputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
 
 Write-Host "Running scan on workspace: $workspacePath"
-$SeverityThreshold = 3 # TODO: Update with a passed in parameter
+
+$scanArgs = @("--workspace", $workspacePath, "--output-file", $outputFilePath)
+
+if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
+    $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
+}
+
+Write-Host "Scan args to pass to 'sf code-analyzer run' are: '$scanArgs'"
 # Run and capture both output and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
 # Grab any std outputs/errors into the variable for parsing later using 2>&1
-$scanOutput = (& sf code-analyzer run --workspace $workspacePath --output-file $outputFilePath 2>&1 --severity-threshold $SeverityThreshold | Out-String).Trim()
+$scanOutput = (& sf code-analyzer run @scanArgs 2>&1 | Out-String).Trim()
 $SFScanExitCode = $LASTEXITCODE
 
 Write-Host "Exit code from scanner: '$SFScanExitCode'"
 Write-Host "Raw scanner output:`n$scanOutput"
 
-# Find the total number of violations using matching from the output
-# Always try to get total violations, but only try and get violations exceeding threshold if we've got a non-zero exit code
+
+# Find the total number of violations from the scanner output
 if ($scanOutput -match 'Found\s+(\d+)\s+violation') {
     $totalViolations = [int]$matches[1]
     Write-Host "Total violations detected from scan output: $totalViolations"
-    Write-Host "##vso[task.setvariable variable=totalViolations]$totalViolations" # TODO: may not need to do these since we're not accessing variables in other ADO tasks
     $env:totalViolations = $totalViolations
 } else {
     Write-Warning "Could not parse total violations from scan output."
 }
 
-if (($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) -and ($env:STOP_ON_VIOLATIONS -eq "true")) {
-    Write-Host "Too many violations '$totalViolations' found - above the threshold of '$env:MAXIMUM_VIOLATIONS'"
-    $env:VIOLATIONS_EXCEEDED = "true"
-    Write-Host "##vso[task.setvariable variable=VIOLATIONS_EXCEEDED]true"
-    Write-Error "Failing the build. See the HTML file in Published Artefacts for details"
-} else {
-    Write-Host "Violations '$totalViolations' found but STOP_ON_VIOLATIONS is false so passing"
-}
+# Determine failure condition based on selected strategy
+if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
+    if ($SFScanExitCode -ne 0 -and $scanOutput -match '(\d+)\s+violations met or exceeded the severity threshold') {
+        $thresholdBreaches = [int]$matches[1]
+        Write-Warning "Violations above the supplied severity threshold: '$thresholdBreaches'"
+        $env:thresholdViolations = $thresholdBreaches
 
-# Only if threshold was exceeded (non-zero exit code), try to capture the threshold breach line
-if ($SFScanExitCode -ne 0 -and $scanOutput -match '(\d+)\s+violations met or exceeded the severity threshold') {
-    $thresholdBreaches = [int]$matches[1]
-    Write-Warning "Violations above the supplied severity threshold: '$thresholdBreaches'"
-    Write-Host "##vso[task.setvariable variable=thresholdViolations]$thresholdBreaches"
-    $env:thresholdViolations = $thresholdBreaches
+        if ($thresholdBreaches -gt 0 -and $env:STOP_ON_VIOLATIONS -eq "true") {
+            Write-Error "Failing the build: $thresholdBreaches violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
+            $env:VIOLATIONS_EXCEEDED = "true"
+        } else {
+            Write-Host "Severity threshold violations found, but STOP_ON_VIOLATIONS is false — build allowed to pass."
+        }
+    } else {
+        Write-Host "No severity threshold violations found."
+    }
+}
+elseif ($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {
+    Write-Host "Too many violations '$totalViolations' found — above the threshold of '$env:MAXIMUM_VIOLATIONS'"
+    $env:VIOLATIONS_EXCEEDED = "true"
+    Write-Error "Failing the build. See the HTML file in Published Artefacts for details."
+}
+else {
+    Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."
 }
 
 # 6. Publish the results as a pipeline artifact

@@ -18,8 +18,9 @@ This extension runs Salesforce Code Analyzer v5 on the changed files in a pull r
 ## Usage
 
 1. Install this extension in your Azure DevOps organization.
-2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example
-3. Set optional parameters like `maximumViolations` or `postStatusCheckToPR`.
+2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example.
+3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks.
+4. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here]https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD.
 
 ```yaml 
 trigger: none 

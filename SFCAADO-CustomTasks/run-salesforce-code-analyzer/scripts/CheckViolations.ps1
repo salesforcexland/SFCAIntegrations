@@ -16,20 +16,17 @@ if (Test-Path $resultsFile) {
         }
 
         Write-Host "Total Code Violations: '$totalViolations'"
-        Write-Host "##vso[task.setvariable variable=totalViolations]$totalViolations"
         $env:totalViolations = $totalViolations
 
         if (($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) -and ($env:STOP_ON_VIOLATIONS -eq "true")) {
             Write-Host "Too many violations '$totalViolations' found - above the threshold of '$env:MAXIMUM_VIOLATIONS'"
             $env:VIOLATIONS_EXCEEDED = "true"
-            Write-Host "##vso[task.setvariable variable=VIOLATIONS_EXCEEDED]true"
             Write-Error "Failing the build. See the HTML file in Published Artefacts for details"
         } else {
             Write-Host "Violations '$totalViolations' found but STOP_ON_VIOLATIONS is false so passing"
         }
     } else {
         Write-Host "No violations found in the HTML file or the pattern did not match - assuming 0"
-        Write-Host "##vso[task.setvariable variable=totalViolations]$totalViolations"
     }
 } else {
     Write-Host "Results file not found at path: $resultsFile"
