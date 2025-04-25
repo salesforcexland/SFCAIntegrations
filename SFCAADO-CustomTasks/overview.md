@@ -19,8 +19,20 @@ This extension runs Salesforce Code Analyzer v5 on the changed files in a pull r
 
 1. Install this extension in your Azure DevOps organization.
 2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example.
-3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks.
+3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks, as outlined below.
 4. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here]https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD.
+
+## 🧩 Task Inputs
+
+| Name                   | Required      | Type     | Description |
+|------------------------|---------------|----------|-------------|
+| `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
+| `stopOnViolations`     | No            | Boolean  | Whether to fail the build if violations exceed threshold (default: `true`) |
+| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
+| `extensionsToScan`     | No            | String   | Pipe-delimited list of file extensions to include (default: `cls\|trigger\|js\|html\|page\|cmp\|component\|flow-meta.xml`) |
+| `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
+| `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
+
 
 ```yaml 
 trigger: none 
@@ -45,15 +57,20 @@ steps:
     
   - task: run-salesforce-code-analyzer@0 # Call the custom task for SF Code Analyzer analysis
     inputs:
-      maximumViolations: '10'
-      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
-      postStatusCheckToPR: false
-      stopOnViolations: true
+        stopOnViolations: true
+        useSeverityThreshold: true
+        severityThreshold: '2'
+        extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+        postStatusCheckToPR: false
 ```
 
-  - If you were to set `postStatusCheckToPR` to be `true`, you need to make sure you pass in the below too so it can leverage your access token:
+  - If you were to set `postStatusCheckToPR` to be `true`, you need to make sure you pass in your SYSTEM_ACCESSTOKEN too so it can leverage your permissions to Contribute to Pull Requests.
+  - An example is shown below for how you could do this, making sure you include any other relevant variables in the 'inputs':
 ```yaml
-    env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    inputs:
+        postStatusCheckToPR: false
+    env: 
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
 ## Links

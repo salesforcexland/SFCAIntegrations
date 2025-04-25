@@ -1,84 +1,96 @@
 # Salesforce Code Analyzer - Azure DevOps PR Scan Task
 
-This Azure DevOps extension provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against delta (PR-only) changes in your Salesforce source code. It supports configurable violation thresholds, optional status check reporting back to the pull request, and full artifact publication of scan results.
+This Azure DevOps extension provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts a status check back to the PR.
 
 ---
 
 ## 🔍 What It Does
 
-- Detects changed files in PRs (`cls`, `trigger`, `js`, `html`, `cmp`, `flow-meta.xml`, etc.)
+- Detects delta files in PRs (`cls`, `trigger`, `js`, `html`, `cmp`, `flow-meta.xml`, etc.)
 - Runs [Salesforce Code Analyzer v5](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
-- Fails the build if violations exceed a threshold
-- Optionally posts a status check back to the PR
-- Publishes scan output as pipeline artifacts
+- Supports **two failure modes**:
+  - Max total violations exceeded
+  - Any violations exceeding a **severity threshold** (Info → Critical)
+- Publishes HTML scan results and delta files as pipeline artifacts
+- Optionally posts a **status check** to the PR with success/failure
 
 ---
 
 ## ✅ Requirements
 
 - Pipeline must run on `ubuntu-latest`
-- Node.js 20+ and Python 3.10+ must be present (can be installed via `UseNode@1` and `UsePythonVersion@0`)
-- PR validation must be configured on your repo for the pipeline to trigger correctly
+- Node.js 20+ and Python 3.10+ must be available (via `UseNode@1` and `UsePythonVersion@0`)
+- PR build validation policies must be set up to control trigger behavior
+- `checkout` step must override `fetchDepth` to 0 for proper git diffing
 
 ---
 
-## 📦 Inputs
+## 🧩 Task Inputs
 
-| Name                 | Required | Description |
-|----------------------|----------|-------------|
-| `maximumViolations` | ❌       | Max allowed violations before failing the build (default: `10`) |
-| `postStatusCheckToPR` | ❌     | `true/false` — whether to post a PR status check (default: `false`) |
+| Name                   | Required      | Type     | Description |
+|------------------------|---------------|----------|-------------|
+| `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
+| `stopOnViolations`     | No            | Boolean  | Whether to fail the build if violations exceed threshold (default: `true`) |
+| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
+| `extensionsToScan`     | No            | String   | Pipe-delimited list of file extensions to include (default: `cls\|trigger\|js\|html\|page\|cmp\|component\|flow-meta.xml`) |
+| `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
+| `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
 
 ---
 
 ## 🔐 Required Permissions
 
-If `postStatusCheckToPR` is enabled, make sure to add:
+If `postStatusCheckToPR` is set to `true`, you must add the following to your pipeline YAML:
+
 ```yaml
 env:
   SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
-This allows the task to authenticate against the Azure DevOps API to post the result.
+This allows the task to authenticate against the Azure DevOps API to post the result, as long as your build service user has the 'Contribute to Pull Requests' permission.
 
 ---
 
 ## 📁 Output
 
+- Published artefacts on the Pipeline Build, including:
 - Scan results HTML: `SFCAv5Results.html`
-- Delta files scanned: Copied into artifact directory
-- Optional status posted back to the source PR
+- Delta files scanned: Copied into artifact directory under 'scanned-delta-files'
+- Optional status posted back to the source PR if necessary
 
 ---
 
 ## 🧪 Example Usage
 
 ```yaml 
-trigger: none 
-pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+trigger: none
+pr: none  # We'll trigger this pipeline via branch policy for PRs
 
 pool:
   vmImage: ubuntu-latest
 
 steps:
   - checkout: self
-    fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
+    fetchDepth: 0  # Required for correct git diff
+
   - task: UseNode@1
     inputs:
-      version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
+      version: '22.x'
       checkLatest: true
-    displayName: 'Install NodeJS'
+
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
+      versionSpec: '3.10'
       addToPath: true
-    displayName: 'Ensure Python 3.10+ is Available'
-    
-  - task: run-salesforce-code-analyzer@0 # Call the custom task for SF Code Analyzer analysis
+
+  - task: run-salesforce-code-analyzer@0
     inputs:
-      maximumViolations: '41'
-      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
-      postStatusCheckToPR: false
       stopOnViolations: true
+      useSeverityThreshold: true
+      severityThreshold: '3'  # Moderate and above
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+      postStatusCheckToPR: true
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
 ---
@@ -90,7 +102,7 @@ steps:
 ## 📚 Resources
 
 - [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
-- [GitHub Repository](https://github.com/your-org/your-repo) <!-- update if applicable -->
-- [File an Issue](https://github.com/your-org/your-repo/issues) <!-- update if applicable -->
+- [GitHub Repository](https://github.com/sam-gearset/SFCAIntegrations/tree/feature/SFCAADO-CustomTask-SplitAndV1)
+- [File an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
 
 ---

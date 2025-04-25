@@ -35,9 +35,9 @@ if ($BUILD_REASON -match 'PullRequest') {
         Write-Host "Uploading scanned delta files as pipeline artifact..."
         Write-Host "##vso[artifact.upload artifactname=scanned-delta-files]$env:BUILD_STAGINGDIRECTORY"
     } else {
-        Write-Host "No relevant files found. Skipping downstream steps."
+        Write-Warning "No relevant files found. Skipping downstream steps."
     }
 } else {
-    Write-Host "Not a PullRequest build. Skipping diff logic."
+    Write-Warning "Not a PullRequest build. Skipping diff logic."
     $env:RELEVANT_FILES_FOUND = "false"
 }
