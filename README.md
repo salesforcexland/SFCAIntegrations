@@ -2,6 +2,7 @@
 
 This Azure DevOps extension provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts a status check back to the PR.
 
+See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed blog for further information.
 ---
 
 ## 🔍 What It Does
