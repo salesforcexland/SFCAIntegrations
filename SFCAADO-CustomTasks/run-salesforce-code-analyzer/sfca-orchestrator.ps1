@@ -1,4 +1,4 @@
-# Pull in custom input from task.json, log them, and set them as env vars for child scripts
+# Grab any configured variables from the task INPUT, and loop through to create internal env vars for the subfunctions
 $USE_SEVERITY_THRESHOLD = $env:INPUT_USESEVERITYTHRESHOLD
 Write-Warning "Set USE_SEVERITY_THRESHOLD to: $USE_SEVERITY_THRESHOLD - this dictates whether we're tracking total violations or any violations exceeding a specific threshold"
 $env:USE_SEVERITY_THRESHOLD = $USE_SEVERITY_THRESHOLD # ← env vars for use throughout now
@@ -23,9 +23,6 @@ $STOP_ON_VIOLATIONS = $env:INPUT_STOPONVIOLATIONS
 Write-Host "Set STOP_ON_VIOLATIONS to: $STOP_ON_VIOLATIONS"
 $env:STOP_ON_VIOLATIONS = $STOP_ON_VIOLATIONS
 
-# Set reusable token if needed
-Write-Host "##vso[task.setvariable variable=SYSTEM_ACCESSTOKEN]$env:SYSTEM_ACCESSTOKEN"
-
 # Step 1 – always run to detect changes and set env var
 . \"$PSScriptRoot/scripts/ScanDeltaFiles.ps1\"
 
@@ -33,13 +30,13 @@ Write-Host "##vso[task.setvariable variable=SYSTEM_ACCESSTOKEN]$env:SYSTEM_ACCES
 $RELEVANT_FILES_FOUND = $env:RELEVANT_FILES_FOUND
 Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
 
-# Step 2 – only proceed if RELEVANT_FILES_FOUND is true
+# Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true
 if ($RELEVANT_FILES_FOUND -eq "true") {
+    Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
     . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
-    #Write-Host "Scanner has been ran - now checking violations" # << Not needed as handling inside 'RunScannerAndAnalyse.ps1' now
-    #. \"$PSScriptRoot/scripts/CheckViolations.ps1\"
-    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded"
+
     $VIOLATIONS_EXCEEDED = $env:VIOLATIONS_EXCEEDED
+    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$VIOLATIONS_EXCEEDED'"
 
     if ($POST_STATUS_CHECK_TO_PR -eq "true") {
         Write-Host 'POST status check is true - passing into subfunction'
@@ -48,7 +45,7 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
         Write-Host "POST_STATUS_CHECK_TO_PR is false — skipping status check"
     }
 
-    # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
+    # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
     if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0)) {
         $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
         Write-Host $failMessage

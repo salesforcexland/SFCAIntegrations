@@ -15,7 +15,6 @@ $outputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
 Write-Host "Running scan on workspace: $workspacePath"
 
 $scanArgs = @("--workspace", $workspacePath, "--output-file", $outputFilePath)
-
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }
@@ -28,7 +27,6 @@ $SFScanExitCode = $LASTEXITCODE
 
 Write-Host "Exit code from scanner: '$SFScanExitCode'"
 Write-Host "Raw scanner output:`n$scanOutput"
-
 
 # Find the total number of violations from the scanner output
 if ($scanOutput -match 'Found\s+(\d+)\s+violation') {

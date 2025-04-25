@@ -1,3 +1,4 @@
+Write-Host "Checking whether we're in a PR or not, and proceeding to find delta files for scanning"
 $targetfolder = "$env:BUILD_STAGINGDIRECTORY/"
 
 # Currently only runs on PRs as it depends on the delta to scan and generate the report, rather than a full branch worth of files
