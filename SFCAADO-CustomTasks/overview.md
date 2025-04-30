@@ -5,11 +5,11 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## Key Features
 
-- Scans only changed files in PRs (delta scanning)
-- Uses the latest version of Salesforce Code Analyzer, currently v5
-- Outputs results as artifacts (html report and each changed file)
-- Optional PR status check POST onto the PR
-- Threshold capabilities for the amount of issues you would accept before failing the build
+- Threshold capabilities for the amount of issues you would accept before failing the build, or any issues above a particular severity
+- Installs and uses the latest version of Salesforce Code Analyzer, currently v5
+- Scans only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
+- Outputs results as artifacts (html report and each changed file) for investigation
+- Optional PR status check POST onto the PR for extra visibility
 
 ## Requirements
 
@@ -62,7 +62,7 @@ steps:
     inputs:
         stopOnViolations: true
         useSeverityThreshold: true
-        severityThreshold: '2'
+        severityThreshold: '3'  # Moderate and above
         extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
         postStatusCheckToPR: false
 ```
@@ -71,13 +71,13 @@ steps:
   - An example is shown below for how you could do this, making sure you include any other relevant variables in the 'inputs':
 ```yaml
     inputs:
-        postStatusCheckToPR: false
+        postStatusCheckToPR: true
     env: 
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
 ## Links
 - [Detailed blog](https://devopslaunchpad.com/blog/salesforce-code-analyzer/)
-- [GitHub Repo](https://github.com/sam-gearset/SFCAIntegrations/tree/feature/SFCAADO-CustomTask-SplitAndV1)
-- [Documentation](https://github.com/sam-gearset/SFCAIntegrations/tree/feature/SFCAADO-CustomTask-SplitAndV1)
-- [Submit an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
+- [GitHub Repo](https://github.com/salesforcexland/SFCAIntegrations)
+- [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
+- [Submit an Issue](https://github.com/salesforcexland/SFCAIntegrations/issues)

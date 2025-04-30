@@ -102,8 +102,8 @@ steps:
 
 ## 📚 Resources
 
+- [Detailed blog](https://devopslaunchpad.com/blog/salesforce-code-analyzer/)
 - [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
-- [GitHub Repository](https://github.com/sam-gearset/SFCAIntegrations/tree/feature/SFCAADO-CustomTask-SplitAndV1)
-- [File an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
+- [Submit an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
 
 ---

@@ -35,8 +35,7 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
     Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
     . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
 
-    $VIOLATIONS_EXCEEDED = $env:VIOLATIONS_EXCEEDED
-    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$VIOLATIONS_EXCEEDED'"
+    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
 
     if ($POST_STATUS_CHECK_TO_PR -eq "true") {
         Write-Host 'POST status check is true - passing into subfunction'
@@ -52,18 +51,17 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
         Write-Host "##vso[task.logissue type=error]$failMessage"
         Write-Host "##vso[task.complete result=Failed;]$failMessage"
     }
-    elseif ($VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
+    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
         $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
         Write-Host $failMessage
         Write-Host "##vso[task.logissue type=error]$failMessage"
         Write-Host "##vso[task.complete result=Failed;]$failMessage"
     }
+    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
+        Write-Host "💡 Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+    }
     else {
-        if ($VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -ne "true") {
-            Write-Host "💡 Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
-        } else {
-            Write-Host "✅ Build passed: violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) are within the allowed threshold. Passed."
-        }
+        Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
     }
 
 } else {
