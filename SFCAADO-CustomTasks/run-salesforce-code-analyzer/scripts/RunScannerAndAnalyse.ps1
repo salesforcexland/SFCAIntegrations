@@ -46,10 +46,11 @@ if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
 
         if ($thresholdBreaches -gt 0 -and $env:STOP_ON_VIOLATIONS -eq "true") {
             Write-Error "Failing the build: $thresholdBreaches violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
-            $env:VIOLATIONS_EXCEEDED = "true"
         } else {
             Write-Host "Severity threshold violations found, but STOP_ON_VIOLATIONS is false — build allowed to pass."
         }
+        # Regardless of the stop_on_violations, the violation threshold was exceeded
+        $env:VIOLATIONS_EXCEEDED = "true"
     } else {
         Write-Host "No severity threshold violations found."
         $env:VIOLATIONS_EXCEEDED = "false"

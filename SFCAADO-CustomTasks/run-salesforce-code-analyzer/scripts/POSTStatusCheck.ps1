@@ -13,7 +13,7 @@ $statusState = if ($env:VIOLATIONS_EXCEEDED -eq "true") { "failed" } else { "suc
 
 $status = @{
   "state" = $statusState
-  "description" = "Code analysis completed with $totalViolations violations. View details at: $buildUrl"
+  "description" = "Code analysis completed with $totalViolations total violations (all severities). View details at: $buildUrl"
   "targetUrl" = $buildUrl
   "context" = @{
     "name" = "Salesforce Code Analyzer - Scan"

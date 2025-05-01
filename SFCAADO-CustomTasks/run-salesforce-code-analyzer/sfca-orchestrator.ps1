@@ -45,7 +45,7 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
     }
 
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
-    if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0)) {
+    if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
         $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
         Write-Host $failMessage
         Write-Host "##vso[task.logissue type=error]$failMessage"
@@ -58,7 +58,10 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
         Write-Host "##vso[task.complete result=Failed;]$failMessage"
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        Write-Host "💡 Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+        $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+        Write-Host $warningMessage
+        Write-Host "##vso[task.logissue type=warning]$warningMessage"
+        Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
     }
     else {
         Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."

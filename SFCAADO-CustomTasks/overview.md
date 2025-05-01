@@ -1,7 +1,7 @@
 # Salesforce Code Analyzer for Azure DevOps
 
-This extension runs Salesforce Code Analyzer v5 on the changed files in a pull request. It reports code violations, publishes results, and can fail the build to let you block merges.
-See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed blog for further information.
+This extension allows you to run Salesforce Code Analyzer v5 on the changed files in a pull request. It reports code violations, publishes results, and can fail the build to let you block merges. It follows a fail fast approach if there's no relevant files and skips the rest of the logic, gives you artifacts to analyse after a valid run, and provides detailed logs and feedback to that PR once complete.
+
 
 ## Key Features
 
@@ -13,7 +13,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## Requirements
 
-- Azure DevOps (Cloud only), with an available build agent
+- Azure DevOps (Cloud only), with an available build agent and permissions to configure the pipeline
 - Pull request build validation setup using a .yml file and ADO Build Policies
 - Your build user having 'Contribute to pull requests' permission if using the 'postStatusCheckToPR' option
 
@@ -23,6 +23,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example.
 3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks, as outlined below.
 4. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD).
+   - I'd recommend using the 'useSeverityThreshold' capability to be much more specific around what types of violation you'd like to fail builds on, rather than total violations.
 
 ## Task Inputs
 
@@ -77,7 +78,7 @@ steps:
 ```
 
 ## Links
-- [Detailed blog](https://devopslaunchpad.com/blog/salesforce-code-analyzer/)
+- [Blog covering wider context and implementation guidance](https://devopslaunchpad.com/blog/salesforce-code-analyzer/)
 - [GitHub Repo](https://github.com/salesforcexland/SFCAIntegrations)
 - [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
 - [Submit an Issue](https://github.com/salesforcexland/SFCAIntegrations/issues)
