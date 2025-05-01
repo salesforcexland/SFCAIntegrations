@@ -53,12 +53,12 @@ steps:
       version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
       checkLatest: true
     displayName: 'Install NodeJS'
-  - task: UsePythonVersion@0
+  - task: UsePythonVersion@0 
     inputs:
       versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
       addToPath: true
     displayName: 'Ensure Python 3.10+ is Available'
-    
+  # Keep the above installs separate to the task to allow ADO caching, and separate the SFCA-specific elements into the task  
   - task: run-salesforce-code-analyzer@0 # Call the custom task for SF Code Analyzer analysis
     inputs:
         stopOnViolations: true
