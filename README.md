@@ -105,4 +105,4 @@ steps:
 ---
 
 ## 📬 Contact
-For questions, suggestions, or support, feel free to reach out directly: [crossland9221@gmail.com](crossland9221@gmail.com)
+For questions, suggestions, or support, feel free to reach out directly: **crossland9221@gmail.com**
