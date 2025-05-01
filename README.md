@@ -103,3 +103,6 @@ steps:
 - [Submit an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
 
 ---
+
+## 📬 Contact
+For questions, suggestions, or support, feel free to reach out directly: [crossland9221@gmail.com]

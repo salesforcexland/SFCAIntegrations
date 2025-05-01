@@ -82,3 +82,6 @@ steps:
 - [GitHub Repo](https://github.com/salesforcexland/SFCAIntegrations)
 - [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
 - [Submit an Issue](https://github.com/salesforcexland/SFCAIntegrations/issues)
+
+## 📬 Contact
+For questions, suggestions, or support, feel free to reach out directly: [crossland9221@gmail.com]
