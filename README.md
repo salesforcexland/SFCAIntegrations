@@ -83,7 +83,7 @@ steps:
       addToPath: true
     displayName: 'Ensure Python 3.10+ is Available'
   # Keep the above installs separate to the task to allow ADO caching, and separate the SFCA-specific elements into the task 
-  - task: run-salesforce-code-analyzer@0
+  - task: run-salesforce-code-analyzer@1
     inputs:
       stopOnViolations: true
       useSeverityThreshold: true
