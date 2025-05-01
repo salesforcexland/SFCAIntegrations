@@ -53,7 +53,6 @@ if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
         $env:VIOLATIONS_EXCEEDED = "true"
     } else {
         Write-Host "No severity threshold violations found."
-        $env:VIOLATIONS_EXCEEDED = "false"
     }
 }
 elseif ($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {

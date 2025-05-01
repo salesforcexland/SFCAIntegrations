@@ -32,6 +32,7 @@ Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
 
 # Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true
 if ($RELEVANT_FILES_FOUND -eq "true") {
+    $env:VIOLATIONS_EXCEEDED = "false" # Staging this as false and only flip to true if we find issues
     Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
     . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
 
