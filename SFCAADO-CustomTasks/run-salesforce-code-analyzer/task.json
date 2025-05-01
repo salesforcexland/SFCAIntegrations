@@ -1,0 +1,81 @@
+{
+  "id": "5a1dfb21-3bcd-4ed7-9412-84e924b2e517",
+  "name": "run-salesforce-code-analyzer",
+  "friendlyName": "Salesforce Code Analyzer - ADO PR Scan",
+  "description": "Runs Salesforce Code Analyzer v5 against PR delta files in Azure DevOps and enforces violation thresholds.",
+  "author": "Sam Crossland",
+  "helpMarkDown": "Only runs on pull requests and scans the changed files for code quality violations.",
+  "category": "Build and release",
+  "visibility": [ "Build" ],
+  "runsOn": [ "Agent" ],
+  "instanceNameFormat": "SFCA PR Scan",
+  "iconPath": "icon.png",
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "inputs": [
+    {
+      "name": "extensionsToScan",
+      "type": "string",
+      "label": "File extensions to scan (pipe-delimited)",
+      "defaultValue": "cls|trigger|js|html|page|cmp|component|flow-meta.xml",
+      "required": false,
+      "helpMarkDown": "Pipe-delimited list of file extensions to include in the scan (e.g., cls|trigger|html)"
+    },
+    {
+      "name": "stopOnViolations",
+      "type": "boolean",
+      "label": "Stop build if violations exceed maximum (true/false)",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "If true, the build will fail when the number of violations exceeds the threshold."
+    },
+    {
+      "name": "useSeverityThreshold",
+      "type": "boolean",
+      "label": "Use severity threshold instead of maximum violation count",
+      "defaultValue": false,
+      "helpMarkDown": "If enabled, the build fails when violations meet/exceed a severity threshold. Otherwise, it fails on total violations."
+    },
+    {
+      "name": "severityThreshold",
+      "type": "pickList",
+      "label": "Severity Threshold (fail on >=)",
+      "defaultValue": "",
+      "required": false,
+      "visibleRule": "useSeverityThreshold = true",
+      "options": {
+        "1": "Critical (1)",
+        "2": "High (2)",
+        "3": "Moderate (3)",
+        "4": "Low (4)",
+        "5": "Info (5)"
+      },
+      "helpMarkDown": "Select the severity threshold to fail the build on if any violations hit/exceed it."
+    },
+    {
+      "name": "maximumViolations",
+      "type": "string",
+      "label": "Maximum Allowed Violations",
+      "defaultValue": "10",
+      "required": false,
+      "visibleRule": "useSeverityThreshold = false",
+      "helpMarkDown": "Fail the build if total violations exceed this number (irrespective of severity)."
+    },
+    {
+      "name": "postStatusCheckToPR",
+      "type": "boolean",
+      "label": "Post status check to PR (true/false)",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we POST an extra status check to the source PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    }
+  ],
+  "execution": {
+    "Node10": {
+      "target": "sfca-orchestrator.js"
+    }
+  }
+}
