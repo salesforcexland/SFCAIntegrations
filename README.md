@@ -1,8 +1,9 @@
 # Salesforce Code Analyzer - Azure DevOps PR Scan Task
 
-This Azure DevOps extension provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts a status check back to the PR.
+This Azure DevOps [extension](https://marketplace.visualstudio.com/items?itemName=SamCrossland.salesforce-code-analyzer-ado-repos-task) provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts a status check back to the PR.
 
 See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed blog for further information.
+
 ---
 
 ## 🔍 What It Does
@@ -101,6 +102,16 @@ steps:
 - [Detailed blog](https://devopslaunchpad.com/blog/salesforce-code-analyzer/)
 - [Salesforce Code Analyzer Docs](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
 - [Submit an Issue](https://github.com/sam-gearset/SFCAIntegrations/issues)
+
+## 🖥️ Screenshots
+
+![ADO Extension](.github/images/extension.png)
+
+![Pipeline yml](.github/images/pipelineyml.png)
+
+![PR Run](.github/images/pipelinerun.png)
+
+![SFCA Report](.github/images/pipelinecomplete.png)
 
 ---
 
