@@ -10,11 +10,12 @@ sf plugins install code-analyzer@latest
 
 # 5. Run SFCA v5 scan
 $workspacePath = "$env:BUILD_STAGINGDIRECTORY/**"
-$outputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
+$HTMLOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 
 Write-Host "Running scan on workspace: $workspacePath"
 
-$scanArgs = @("--workspace", $workspacePath, "--output-file", $outputFilePath)
+$scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $HTMLOutputFilePath)
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }
@@ -33,8 +34,13 @@ if ($scanOutput -match 'Found\s+(\d+)\s+violation') {
     $totalViolations = [int]$matches[1]
     Write-Host "Total violations detected from scan output: $totalViolations"
     $env:totalViolations = $totalViolations
-} else {
-    Write-Warning "Could not parse total violations from scan output."
+} elseif (Test-Path $JSONOutputFilePath) {
+    Write-Host "Grabbing the total violations from the output json '$JSONOutputFilePath'"
+    $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+    $env:totalViolations = $SFCAResultJSON.violationCounts.total
+}
+else {
+    Write-Warning "Could not parse total violations from scan output or JSON."
 }
 
 # Determine failure condition based on selected strategy
@@ -64,6 +70,7 @@ else {
     Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."
 }
 
-# 6. Publish the results as a pipeline artifact
-Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$outputFilePath"
+# 6. Publish the results as a pipeline artifact (TODO: could consolidate these into 1)
+Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results-html;]$HTMLOutputFilePath"
+Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results-json;]$JSONOutputFilePath"
 Write-Host "Scan complete. Results published as artifact: salesforce-code-analyzer-results"
