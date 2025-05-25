@@ -1,0 +1,62 @@
+{
+  "manifestVersion": 1,
+  "id": "salesforce-code-analyzer-ado-repos-task-dev",
+  "name": "Salesforce Code Analyzer PR Task (DEV)",
+  "version": "1.1.6",
+  "publisher": "SamCrossland",
+  "description": "Custom task to run Salesforce Code Analyzer v5 against PR delta files in Azure DevOps.",
+  "categories": [ "Azure Pipelines" ],
+  "content": {
+    "details": {
+      "path": "overview.md"
+    }
+  },
+  "tags": [
+      "salesforce",
+      "code-analysis",
+      "azure-pipelines",
+      "pull-request-checks",
+      "code analyzer"
+  ],
+  "links": {
+    "repository": {
+      "uri": "https://github.com/salesforcexland/SFCAIntegrations"
+    },
+    "support": {
+      "uri": "https://devopslaunchpad.com/blog/salesforce-code-analyzer/"
+    }
+  },
+  "repository": {
+        "type": "git",
+        "uri": "https://github.com/salesforcexland/SFCAIntegrations"
+  },
+  "targets": [
+    { "id": "Microsoft.VisualStudio.Services" }
+  ],
+  "galleryFlags": [
+    "AzureDevOps"
+  ],
+  "icons": {
+    "default": "icon.png"
+  },
+  "branding": {
+    "color": "gray",
+    "theme": "dark"
+  },
+  "files": [
+    {
+      "path": "run-salesforce-code-analyzer-dev",
+      "addressable": true
+    }
+  ],
+  "contributions": [
+    {
+      "id": "run-salesforce-code-analyzer-dev",
+      "type": "ms.vss-distributed-task.task",
+      "targets": [ "ms.vss-distributed-task.tasks" ],
+      "properties": {
+        "name": "run-salesforce-code-analyzer-dev"
+      }
+    }
+  ]
+}
