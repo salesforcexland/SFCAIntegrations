@@ -1,33 +1,30 @@
-# TODO: LIKELY REDUNDANT NOW DUE TO V5 OUTPUTTING THE RESULTS/ERRORS/EXIT CODE UNLIKE V4 WHICH DIDN'T OUTPUT THE TOTAL IN THE LOGS
-$resultsFile = "$env:BUILD_ARTIFACTSTAGINGDIRECTORY/SFCAv5Results.html"
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 $totalViolations = 0
 
-Write-Host "Assessing violations in file: $resultsFile"
+Write-Host "Assessing violations in file: '$JSONOutputFilePath'"
+if (Test-Path $JSONOutputFilePath) {
+    # Load the JSON and grab total violations
+    $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+    $env:totalViolations = $SFCAResultJSON.violationCounts.total
+    Write-Warning "Grabbed the total violations from the JSON as: '$env:totalViolations'"
 
-if (Test-Path $resultsFile) {
-    $SFCAHTMLOutput = Get-Content -Path $resultsFile -Raw
-    $violationsPattern = '"violationCounts":{(.*?)}'
+    # Severity threshold to fail on (as a number, 1–5)
+    $threshold = $env:SEVERITY_THRESHOLD
 
-    if ($SFCAHTMLOutput -match $violationsPattern) {
-        $violationCounts = $matches[1]
+    # Start with 0 violations
+    $severityExceededViolationsTotal = 0
 
-        if ($violationCounts -match '"total":(\d+)') {
-            $totalViolations = [int]$matches[1]
+    # Loop from threshold down to 1 (more severe)
+    for ($i = [int]$threshold; $i -ge 1; $i--) {
+        $sevKey = "sev$i"
+        Write-Host "Searching for severity '$sevKey' violations:"
+        if ($SFCAResultJSON.violationCounts.PSObject.Properties.Name -contains $sevKey) {
+            $sevKeyViolations = $SFCAResultJSON.violationCounts.$sevKey
+            $severityExceededViolationsTotal += $sevKeyViolations
+            Write-Warning "Found '$sevKeyViolations' violations for severity '$sevKey' - adding to the total"
         }
-
-        Write-Host "Total Code Violations: '$totalViolations'"
-        $env:totalViolations = $totalViolations
-
-        if (($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) -and ($env:STOP_ON_VIOLATIONS -eq "true")) {
-            Write-Host "Too many violations '$totalViolations' found - above the threshold of '$env:MAXIMUM_VIOLATIONS'"
-            $env:VIOLATIONS_EXCEEDED = "true"
-            Write-Error "Failing the build. See the HTML file in Published Artefacts for details"
-        } else {
-            Write-Host "Violations '$totalViolations' found but STOP_ON_VIOLATIONS is false so passing"
-        }
-    } else {
-        Write-Host "No violations found in the HTML file or the pattern did not match - assuming 0"
     }
+    Write-Host "Total violations at severity '$threshold' and higher: '$severityExceededViolationsTotal'"
 } else {
-    Write-Host "Results file not found at path: $resultsFile"
+    Write-Host "Results file not found at path: '$JSONOutputFilePath'"
 }

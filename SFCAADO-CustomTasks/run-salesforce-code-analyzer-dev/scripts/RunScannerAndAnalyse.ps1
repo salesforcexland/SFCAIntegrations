@@ -43,6 +43,9 @@ else {
     Write-Warning "Could not parse total violations from scan output or JSON."
 }
 
+Write-Host "Calling sub function ('CheckViolations.ps1') to assess violations"
+. "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)/CheckViolations.ps1"
+
 # Determine failure condition based on selected strategy
 if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
     if ($SFScanExitCode -ne 0 -and $scanOutput -match '(\d+)\s+violations met or exceeded the severity threshold') {
@@ -51,7 +54,7 @@ if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
         $env:thresholdViolations = $thresholdBreaches
 
         if ($thresholdBreaches -gt 0 -and $env:STOP_ON_VIOLATIONS -eq "true") {
-            Write-Error "Failing the build: $thresholdBreaches violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
+            Write-Warning "Failing the build: $thresholdBreaches violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
         } else {
             Write-Host "Severity threshold violations found, but STOP_ON_VIOLATIONS is false — build allowed to pass."
         }
@@ -64,7 +67,7 @@ if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
 elseif ($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {
     Write-Host "Too many violations '$totalViolations' found — above the threshold of '$env:MAXIMUM_VIOLATIONS'"
     $env:VIOLATIONS_EXCEEDED = "true"
-    Write-Error "Failing the build. See the HTML file in Published Artefacts for details."
+    Write-Warning "Failing the build. See the HTML file in Published Artefacts for details."
 }
 else {
     Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."

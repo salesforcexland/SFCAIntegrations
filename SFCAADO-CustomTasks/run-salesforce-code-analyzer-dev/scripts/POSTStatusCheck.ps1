@@ -35,6 +35,6 @@ try {
     $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $statusJson -ErrorAction Stop
     Write-Host "Successfully posted status to PR: $($response.context.name) — $($response.state)"
   } catch {
-    Write-Error "Failed to post status: $_"
+    Write-Warning "Failed to post status: $_"
   }
 
