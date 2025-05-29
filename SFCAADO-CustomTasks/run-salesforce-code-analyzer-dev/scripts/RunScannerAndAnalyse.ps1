@@ -1,11 +1,14 @@
 Write-Host "Starting Salesforce Code Analyzer v5 scan step..."
 
 # 3. Install SF CLI (latest)
-Write-Host "Installing Salesforce CLI..."
+Write-Host "Installing Salesforce CLI:"
 npm install -g @salesforce/cli@latest
 
+Write-Host "Installed Salesforce CLI version:"
+sf --version
+
 # 4. Install SFCA v5 plugin
-Write-Host "Installing Salesforce Code Analyzer plugin..."
+Write-Host "Installing Salesforce Code Analyzer plugin:"
 sf plugins install code-analyzer@latest
 
 # 5. Run SFCA v5 scan
@@ -14,66 +17,36 @@ $HTMLOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
 $JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 
 Write-Host "Running scan on workspace: $workspacePath"
-# Output both HTML and JSON for usage
+# Output both HTML and JSON for usage later
 $scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }
 
 Write-Host "Scan args to pass to 'sf code-analyzer run' are: '$scanArgs'"
-# Run and capture both output and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
-# Grab any std outputs/errors into the variable for parsing later using 2>&1
+# Run and capture both std outputs/errors and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
 $scanOutput = (& sf code-analyzer run @scanArgs 2>&1 | Out-String).Trim()
-$SFScanExitCode = $LASTEXITCODE
+$env:SFScanExitCode = $LASTEXITCODE
 
-Write-Host "Exit code from scanner: '$SFScanExitCode'"
+Write-Host "Exit code from scanner: '$env:SFScanExitCode'"
 Write-Host "Raw scanner output:`n$scanOutput"
 
 # Find the total number of violations from the json file
-if ($scanOutput -match 'Found\s+(\d+)\s+violation') {
+if (Test-Path $JSONOutputFilePath) {
+    Write-Host "Calling sub function ('CheckViolations.ps1') to assess violations from the JSON"
+    . "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)/CheckViolations.ps1"
+}
+elseif ($scanOutput -match 'Found\s+(\d+)\s+violation') {
+    # Backup for total violations
     $totalViolations = [int]$matches[1]
     Write-Host "Total violations detected from scan output: $totalViolations"
     $env:totalViolations = $totalViolations
-} elseif (Test-Path $JSONOutputFilePath) {
-    Write-Host "Grabbing the total violations from the output json '$JSONOutputFilePath'"
-    $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
-    $env:totalViolations = $SFCAResultJSON.violationCounts.total
-}
+} 
 else {
     Write-Warning "Could not parse total violations from scan output or JSON."
 }
 
-Write-Host "Calling sub function ('CheckViolations.ps1') to assess violations"
-. "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)/CheckViolations.ps1"
-
-# Determine failure condition based on selected strategy
-if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
-    if ($SFScanExitCode -ne 0 -and $scanOutput -match '(\d+)\s+violations met or exceeded the severity threshold') {
-        $thresholdBreaches = [int]$matches[1]
-        Write-Warning "Violations above the supplied severity threshold: '$thresholdBreaches'"
-        $env:thresholdViolations = $thresholdBreaches
-
-        if ($thresholdBreaches -gt 0 -and $env:STOP_ON_VIOLATIONS -eq "true") {
-            Write-Warning "Failing the build: $thresholdBreaches violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
-        } else {
-            Write-Host "Severity threshold violations found, but STOP_ON_VIOLATIONS is false — build allowed to pass."
-        }
-        # Regardless of the stop_on_violations, the violation threshold was exceeded
-        $env:VIOLATIONS_EXCEEDED = "true"
-    } else {
-        Write-Host "No severity threshold violations found."
-    }
-}
-elseif ($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {
-    Write-Host "Too many violations '$totalViolations' found — above the threshold of '$env:MAXIMUM_VIOLATIONS'"
-    $env:VIOLATIONS_EXCEEDED = "true"
-    Write-Warning "Failing the build. See the HTML file in Published Artefacts for details."
-}
-else {
-    Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."
-}
-
-# 6. Publish the results as a pipeline artifact (TODO: could consolidate these into 1)
+# 6. Publish the results as a pipeline artifact
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$HTMLOutputFilePath"
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$JSONOutputFilePath"
 Write-Host "Scan complete. Results published as artifact: salesforce-code-analyzer-results"
