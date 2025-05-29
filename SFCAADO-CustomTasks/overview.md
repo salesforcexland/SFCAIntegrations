@@ -48,17 +48,7 @@ pool:
 steps:
   - checkout: self
     fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
-  - task: UseNode@1
-    inputs:
-      version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
-      checkLatest: true
-    displayName: 'Install NodeJS'
-  - task: UsePythonVersion@0 
-    inputs:
-      versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
-      addToPath: true
-    displayName: 'Ensure Python 3.10+ is Available'
-  # Keep the above installs separate to the task to allow ADO caching, and separate the SFCA-specific elements into the task  
+  # Custom task below handles package installs (dependencies are already present in ubuntu-latest), scanning, analysis and publishing of results
   - task: run-salesforce-code-analyzer@1 # Call the custom task for SF Code Analyzer analysis
     inputs:
         stopOnViolations: true
