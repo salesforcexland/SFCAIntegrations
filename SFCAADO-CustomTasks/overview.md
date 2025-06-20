@@ -2,18 +2,20 @@
 
 This extension allows you to run Salesforce Code Analyzer v5 on the changed files in a pull request. It reports code violations, publishes results, and can fail the build to let you block merges. It follows a fail fast approach if there's no relevant files and skips the rest of the logic, gives you artifacts to analyse after a valid run, and provides detailed logs and feedback to that PR once complete.
 
-
 ## Key Features
 
 - Threshold capabilities for the amount of issues you would accept before failing the build, or any issues above a particular severity
 - Installs and uses the latest version of Salesforce Code Analyzer, currently v5
 - Scans only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
-- Outputs results as artifacts (html report and each changed file) for investigation
+- Outputs results as artifacts (html report, json file, and each changed file) for investigation
 - Optional PR status check POST onto the PR for extra visibility
 
 ## Requirements
 
 - Azure DevOps (Cloud only), with an available build agent and permissions to configure the pipeline
+- Pipeline must run on `ubuntu-latest`
+- Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
+- `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing
 - Pull request build validation setup using a .yml file and ADO Build Policies
 - Your build user having 'Contribute to pull requests' permission if using the 'postStatusCheckToPR' option
 
@@ -54,7 +56,7 @@ steps:
         stopOnViolations: true
         useSeverityThreshold: true
         severityThreshold: '3'  # Moderate and above
-        extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+        extensionsToScan: "cls|trigger|js|html|page|cmp|component|.*-meta\\.xml" # Include meta xml files of flows/apex to check for old versions
         postStatusCheckToPR: false
 ```
 

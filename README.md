@@ -21,9 +21,9 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 ## ✅ Requirements
 
 - Pipeline must run on `ubuntu-latest`
-- Node.js 20+ and Python 3.10+ must be available (via `UseNode@1` and `UsePythonVersion@0`)
+- Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
 - PR build validation policies must be set up to control trigger behavior
-- `checkout` step must override `fetchDepth` to 0 for proper git diffing
+- `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing
 
 ---
 
@@ -56,6 +56,7 @@ This allows the task to authenticate against the Azure DevOps API to post the re
 
 - Published artefacts on the Pipeline Build, including:
 - Scan results HTML: `SFCAv5Results.html`
+- Scan results JSON: `SFCAv5Results.json`
 - Delta files scanned: Copied into artifact directory under 'scanned-delta-files'
 - Optional status posted back to the source PR if necessary
 
@@ -79,7 +80,7 @@ steps:
       stopOnViolations: true
       useSeverityThreshold: true
       severityThreshold: '3'  # Moderate and above
-      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|.*-meta\\.xml" # Include meta xml files of flows/apex to check for old versions
       postStatusCheckToPR: true
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
