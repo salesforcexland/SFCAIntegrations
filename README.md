@@ -80,7 +80,7 @@ steps:
       stopOnViolations: true
       useSeverityThreshold: true
       severityThreshold: '3'  # Moderate and above
-      extensionsToScan: "cls|trigger|js|html|page|cmp|component|.*-meta\\.xml" # Include meta xml files of flows/apex to check for old versions
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml" # Include meta xml files of these components to check for old versions
       postStatusCheckToPR: true
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
