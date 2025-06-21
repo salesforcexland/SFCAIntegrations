@@ -1,0 +1,21 @@
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
+    
+  - task: run-salesforce-code-analyzer-dev@1 # Call the custom task for SF Code Analyzer analysis
+    inputs:
+        stopOnViolations: true
+        useSeverityThreshold: true
+        severityThreshold: '3'
+        maximumViolations: '10'
+        extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+        postStatusCheckToPR: true
+        postCommentsToPR: true
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

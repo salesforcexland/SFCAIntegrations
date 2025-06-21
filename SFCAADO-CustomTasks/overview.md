@@ -58,13 +58,15 @@ steps:
         severityThreshold: '3'  # Moderate and above
         extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml" # Include meta xml files of these components to check for old versions
         postStatusCheckToPR: false
+        postCommentsToPR: false
 ```
 
-  - If you were to set `postStatusCheckToPR` to be `true`, you need to make sure you pass in your SYSTEM_ACCESSTOKEN too so it can leverage your permissions to Contribute to Pull Requests.
+  - If you were to set `postStatusCheckToPR` or `postCommentsToPR` to be `true`, you need to make sure you pass in your SYSTEM_ACCESSTOKEN too so it can leverage your permissions to Contribute to Pull Requests.
   - An example is shown below for how you could do this, making sure you include any other relevant variables in the 'inputs':
 ```yaml
     inputs:
         postStatusCheckToPR: true
+        postCommentsToPR: true
     env: 
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```

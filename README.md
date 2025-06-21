@@ -42,7 +42,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## 🔐 Required Permissions
 
-If `postStatusCheckToPR` is set to `true`, you must add the following to your pipeline YAML:
+If `postStatusCheckToPR` or `postCommentsToPR` are `true`, you must add the following to your pipeline YAML:
 
 ```yaml
 env:
@@ -81,7 +81,8 @@ steps:
       useSeverityThreshold: true
       severityThreshold: '3'  # Moderate and above
       extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml" # Include meta xml files of these components to check for old versions
-      postStatusCheckToPR: true
+      postStatusCheckToPR: false
+      postCommentsToPR: true
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
