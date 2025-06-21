@@ -21,9 +21,9 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 ## ✅ Requirements
 
 - Pipeline must run on `ubuntu-latest`
-- Node.js 20+ and Python 3.10+ must be available (via `UseNode@1` and `UsePythonVersion@0`)
+- Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
 - PR build validation policies must be set up to control trigger behavior
-- `checkout` step must override `fetchDepth` to 0 for proper git diffing
+- `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing
 
 ---
 
@@ -42,7 +42,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## 🔐 Required Permissions
 
-If `postStatusCheckToPR` is set to `true`, you must add the following to your pipeline YAML:
+If `postStatusCheckToPR` or `postCommentsToPR` are `true`, you must add the following to your pipeline YAML:
 
 ```yaml
 env:
@@ -56,6 +56,7 @@ This allows the task to authenticate against the Azure DevOps API to post the re
 
 - Published artefacts on the Pipeline Build, including:
 - Scan results HTML: `SFCAv5Results.html`
+- Scan results JSON: `SFCAv5Results.json`
 - Delta files scanned: Copied into artifact directory under 'scanned-delta-files'
 - Optional status posted back to the source PR if necessary
 
@@ -73,24 +74,15 @@ pool:
 steps:
   - checkout: self
     fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
-  - task: UseNode@1
-    inputs:
-      version: '22.x' # Ensure we have NodeJS 22.x at minimum to install SF CLI/Code Analyzer plugin later
-      checkLatest: true
-    displayName: 'Install NodeJS'
-  - task: UsePythonVersion@0 
-    inputs:
-      versionSpec: '3.10' # Ensure we have Python 3.10 at minimum for the Code Analyzer Flow engine
-      addToPath: true
-    displayName: 'Ensure Python 3.10+ is Available'
-  # Keep the above installs separate to the task to allow ADO caching, and separate the SFCA-specific elements into the task 
-  - task: run-salesforce-code-analyzer@1
+  # Custom task below handles package installs (dependencies are already present in ubuntu-latest), scanning, analysis and publishing of results
+  - task: run-salesforce-code-analyzer@1 
     inputs:
       stopOnViolations: true
       useSeverityThreshold: true
       severityThreshold: '3'  # Moderate and above
-      extensionsToScan: "cls|trigger|js|html|page|cmp|component|flow-meta.xml"
-      postStatusCheckToPR: true
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml" # Include meta xml files of these components to check for old versions
+      postStatusCheckToPR: false
+      postCommentsToPR: true
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
