@@ -11,5 +11,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added SF version output for easy assessment in the logs of SF CLI and Code-Analyzer versions
 ### Changed
 - Streamlined the pipeline yml file as node/python are preinstalled on ubuntu-latest so aren't needed
+- Modified the extensionsToScan example to include other -meta.xml files that could be flagged by the Regex engine for having outdated apiVersions
 ### Fixed
  
