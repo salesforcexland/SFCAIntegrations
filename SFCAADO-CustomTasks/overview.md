@@ -34,6 +34,7 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
 | `stopOnViolations`     | No            | Boolean  | Whether to fail the build if violations exceed threshold (default: `true`) |
 | `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
+| `postCommentsToPR`     | No            | Boolean  | Whether to POST comments back to the PR (default: `false`) |
 | `extensionsToScan`     | No            | String   | Pipe-delimited list of file extensions to include (default: `cls\|trigger\|js\|html\|page\|cmp\|component\|flow-meta.xml`) |
 | `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
 | `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
