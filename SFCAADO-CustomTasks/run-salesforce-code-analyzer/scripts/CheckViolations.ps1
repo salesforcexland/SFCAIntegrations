@@ -1,33 +1,46 @@
-# TODO: LIKELY REDUNDANT NOW DUE TO V5 OUTPUTTING THE RESULTS/ERRORS/EXIT CODE UNLIKE V4 WHICH DIDN'T OUTPUT THE TOTAL IN THE LOGS
-$resultsFile = "$env:BUILD_ARTIFACTSTAGINGDIRECTORY/SFCAv5Results.html"
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 $totalViolations = 0
 
-Write-Host "Assessing violations in file: $resultsFile"
+Write-Host "Assessing violations in file: '$JSONOutputFilePath'"
+if (Test-Path $JSONOutputFilePath) {
+    # Load the JSON and grab total violations
+    $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+    $env:totalViolations = $SFCAResultJSON.violationCounts.total
+    Write-Warning "Grabbed the total violations from the JSON as: '$env:totalViolations'"
 
-if (Test-Path $resultsFile) {
-    $SFCAHTMLOutput = Get-Content -Path $resultsFile -Raw
-    $violationsPattern = '"violationCounts":{(.*?)}'
-
-    if ($SFCAHTMLOutput -match $violationsPattern) {
-        $violationCounts = $matches[1]
-
-        if ($violationCounts -match '"total":(\d+)') {
-            $totalViolations = [int]$matches[1]
+    # Only proceed if we've got more than 1 violation, the SF exit code isn't 0, and use_severity_threshold is true, so we can find the violations
+    if (($env:USE_SEVERITY_THRESHOLD -eq "true") -and ($env:SFScanExitCode -ne 0) -and ($env:totalViolations -ne 0)) {
+        # Severity threshold to fail on (as a number, 1–5) and baseline total of 0
+        $threshold = $env:SEVERITY_THRESHOLD
+        $severityExceededViolationsTotal = 0
+        # Loop from threshold down to 1 (more severe)
+        for ($i = [int]$threshold; $i -ge 1; $i--) {
+            $sevKey = "sev$i"
+            Write-Host "Searching for severity '$sevKey' violations:"
+            if ($SFCAResultJSON.violationCounts.PSObject.Properties.Name -contains $sevKey) {
+                $sevKeyViolations = $SFCAResultJSON.violationCounts.$sevKey
+                $severityExceededViolationsTotal += $sevKeyViolations
+                Write-Warning "Found '$sevKeyViolations' violations for severity '$sevKey' - adding to the total"
+            }
         }
-
-        Write-Host "Total Code Violations: '$totalViolations'"
-        $env:totalViolations = $totalViolations
-
-        if (($totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) -and ($env:STOP_ON_VIOLATIONS -eq "true")) {
-            Write-Host "Too many violations '$totalViolations' found - above the threshold of '$env:MAXIMUM_VIOLATIONS'"
-            $env:VIOLATIONS_EXCEEDED = "true"
-            Write-Error "Failing the build. See the HTML file in Published Artefacts for details"
+        Write-Host "Total violations at severity '$threshold' and higher: '$severityExceededViolationsTotal'"
+        $env:thresholdViolations = $severityExceededViolationsTotal
+        if ($severityExceededViolationsTotal -gt 0 -and $env:STOP_ON_VIOLATIONS -eq "true") {
+            Write-Warning "Failing the build: '$severityExceededViolationsTotal' violations exceeded severity threshold '$env:SEVERITY_THRESHOLD'."
         } else {
-            Write-Host "Violations '$totalViolations' found but STOP_ON_VIOLATIONS is false so passing"
+            Write-Host "Severity threshold violations found, but STOP_ON_VIOLATIONS is false — build allowed to pass."
         }
-    } else {
-        Write-Host "No violations found in the HTML file or the pattern did not match - assuming 0"
+        # Regardless of the stop_on_violations, the violation threshold was exceeded
+        $env:VIOLATIONS_EXCEEDED = "true"
+    }
+    elseif ($env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {
+        Write-Host "Too many violations '$env:totalViolations' found — above the threshold of '$env:MAXIMUM_VIOLATIONS'"
+        $env:VIOLATIONS_EXCEEDED = "true"
+        Write-Warning "Failing the build. See the HTML file in Published Artifacts for details."
+    }
+    else {
+        Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."
     }
 } else {
-    Write-Host "Results file not found at path: $resultsFile"
+    Write-Warning "Results file not found at path: '$JSONOutputFilePath' - aborting"
 }

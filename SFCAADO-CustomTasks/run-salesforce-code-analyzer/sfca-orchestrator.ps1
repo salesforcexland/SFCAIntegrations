@@ -11,10 +11,6 @@ $SEVERITY_THRESHOLD = $env:INPUT_SEVERITYTHRESHOLD
 Write-Host "Set SEVERITY_THRESHOLD to: $SEVERITY_THRESHOLD"
 $env:SEVERITY_THRESHOLD = $SEVERITY_THRESHOLD 
 
-$POST_STATUS_CHECK_TO_PR = $env:INPUT_POSTSTATUSCHECKTOPR
-Write-Host "Set POST_STATUS_CHECK_TO_PR to: $POST_STATUS_CHECK_TO_PR"
-$env:POST_STATUS_CHECK_TO_PR = $POST_STATUS_CHECK_TO_PR
-
 $EXTENSIONS_TO_SCAN = $env:INPUT_EXTENSIONSTOSCAN
 Write-Host "Set EXTENSIONS_TO_SCAN to: $EXTENSIONS_TO_SCAN"
 $env:EXTENSIONS_TO_SCAN = $EXTENSIONS_TO_SCAN
@@ -23,6 +19,14 @@ $STOP_ON_VIOLATIONS = $env:INPUT_STOPONVIOLATIONS
 Write-Host "Set STOP_ON_VIOLATIONS to: $STOP_ON_VIOLATIONS"
 $env:STOP_ON_VIOLATIONS = $STOP_ON_VIOLATIONS
 
+$POST_STATUS_CHECK_TO_PR = $env:INPUT_POSTSTATUSCHECKTOPR
+Write-Host "Set POST_STATUS_CHECK_TO_PR to: $POST_STATUS_CHECK_TO_PR"
+$env:POST_STATUS_CHECK_TO_PR = $POST_STATUS_CHECK_TO_PR
+
+$POST_COMMENTS_TO_PR = $env:INPUT_POSTCOMMENTSTOPR
+Write-Host "Set POST_COMMENTS_TO_PR to: $POST_COMMENTS_TO_PR"
+$env:POST_COMMENTS_TO_PR = $POST_COMMENTS_TO_PR
+
 # Step 1 – always run to detect changes and set env var
 . \"$PSScriptRoot/scripts/ScanDeltaFiles.ps1\"
 
@@ -30,7 +34,7 @@ $env:STOP_ON_VIOLATIONS = $STOP_ON_VIOLATIONS
 $RELEVANT_FILES_FOUND = $env:RELEVANT_FILES_FOUND
 Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
 
-# Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true
+# Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true (meaning we must be in a PR)
 if ($RELEVANT_FILES_FOUND -eq "true") {
     $env:VIOLATIONS_EXCEEDED = "false" # Staging this as false and only flip to true if we find issues
     Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
@@ -38,11 +42,11 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
 
     Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
 
-    if ($POST_STATUS_CHECK_TO_PR -eq "true") {
-        Write-Host 'POST status check is true - passing into subfunction'
-        . \"$PSScriptRoot/scripts/POSTStatusCheck.ps1\"
+    if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) {
+        Write-Host 'POST PR Actions requested - passing into subfunction'
+        . \"$PSScriptRoot/scripts/POSTPRActions.ps1\"
     } else {
-        Write-Host "POST_STATUS_CHECK_TO_PR is false — skipping status check"
+        Write-Host "POST PR actions (status/comments) are false — skipping"
     }
 
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
@@ -71,4 +75,3 @@ if ($RELEVANT_FILES_FOUND -eq "true") {
 } else {
     Write-Host "RELEVANT_FILES_FOUND is false — skipping scan, check, and status tasks"
 }
-
