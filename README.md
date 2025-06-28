@@ -87,6 +87,54 @@ steps:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
+```yaml
+trigger: none # We don't want this to run on pushes to branches, only PRs and Scheduled full branch runs
+pr: none      # Enforced with branch policy
+
+schedules:
+  - cron: "45 20 * * *"
+    displayName: "Daily 21:45pm BST run"
+    branches:
+      include:
+        - main # TODO: Remember this will take that branches .yml file version, so ensure it's consistent across branches.
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  # Run this only if it's a PR
+  - task: run-salesforce-code-analyzer@1
+    displayName: Run SFCA for PR
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      stopOnViolations: true
+      useSeverityThreshold: true
+      severityThreshold: '3'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+      postStatusCheckToPR: true
+      postCommentsToPR: true
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  # Run this only if it's *not* a PR (manual/CI/schedule)
+  - task: run-salesforce-code-analyzer@1
+    displayName: Run SFCA for Manual/CI/Scheduled
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      stopOnViolations: false
+      useSeverityThreshold: true
+      severityThreshold: '3'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+      postStatusCheckToPR: false
+      postCommentsToPR: false
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
+
 ---
 
 ## 📚 Resources
