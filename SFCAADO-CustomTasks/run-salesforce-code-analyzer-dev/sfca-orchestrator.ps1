@@ -27,51 +27,65 @@ $POST_COMMENTS_TO_PR = $env:INPUT_POSTCOMMENTSTOPR
 Write-Host "Set POST_COMMENTS_TO_PR to: $POST_COMMENTS_TO_PR"
 $env:POST_COMMENTS_TO_PR = $POST_COMMENTS_TO_PR
 
-# Step 1 – always run to detect changes and set env var
-. \"$PSScriptRoot/scripts/ScanDeltaFiles.ps1\"
+$SCAN_FULL_BRANCH = $env:INPUT_SCANFULLBRANCH
+Write-Host "Set SCAN_FULL_BRANCH to: $SCAN_FULL_BRANCH"
+$env:SCAN_FULL_BRANCH = $SCAN_FULL_BRANCH
 
-# Re-fetch after ScanDeltaFiles.ps1 has set it
-$RELEVANT_FILES_FOUND = $env:RELEVANT_FILES_FOUND
-Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
+# If scanFullBranch is true, skip the delta logic entirely
+if ($SCAN_FULL_BRANCH -eq "true") {
+    Write-Host "Scan full branch requested — skipping ScanDeltaFiles and running full scan on the branch '$env:BUILD_SOURCEBRANCH'."
+    . "$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1"
+}
+else {
+    # Normal delta flow for PRs
+    Write-Host "Scan full branch is FALSE — checking we're in a PR and only scanning if we have relevant files in the delta"
+    # Step 1 – always run to detect changes and set env var
+    . \"$PSScriptRoot/scripts/ScanDeltaFiles.ps1\"
 
-# Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true (meaning we must be in a PR)
-if ($RELEVANT_FILES_FOUND -eq "true") {
-    $env:VIOLATIONS_EXCEEDED = "false" # Staging this as false and only flip to true if we find issues
-    Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
-    . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
+    # Re-fetch after ScanDeltaFiles.ps1 has set it
+    $RELEVANT_FILES_FOUND = $env:RELEVANT_FILES_FOUND
+    Write-Host "RELEVANT_FILES_FOUND is: $RELEVANT_FILES_FOUND"
 
-    Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
+    # Step 2>4 – only proceed if RELEVANT_FILES_FOUND is true (meaning we must be in a PR)
+    if ($RELEVANT_FILES_FOUND -eq "true") {
+        $env:VIOLATIONS_EXCEEDED = "false" # Staging this as false and only flip to true if we find issues
+        Write-Host "Relevant files have been found - handing off to RunScannerAndAnalyse"
+        . \"$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1\"
 
-    if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) {
-        Write-Host 'POST PR Actions requested - passing into subfunction'
-        . \"$PSScriptRoot/scripts/POSTPRActions.ps1\"
+        Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
+
+        if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) {
+            Write-Host 'POST PR Actions requested - passing into subfunction'
+            . \"$PSScriptRoot/scripts/POSTPRActions.ps1\"
+        } else {
+            Write-Host "POST PR actions (status/comments) are false — skipping"
+        }
     } else {
-        Write-Host "POST PR actions (status/comments) are false — skipping"
+        Write-Host "RELEVANT_FILES_FOUND is false — skipping scan, check, and status tasks"
     }
+}
 
-    # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
-    if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
-        $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
-        Write-Host $failMessage
-        Write-Host "##vso[task.logissue type=error]$failMessage"
-        Write-Host "##vso[task.complete result=Failed;]$failMessage"
-    }
-    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
-        $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
-        Write-Host $failMessage
-        Write-Host "##vso[task.logissue type=error]$failMessage"
-        Write-Host "##vso[task.complete result=Failed;]$failMessage"
-    }
-    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
-        Write-Host $warningMessage
-        Write-Host "##vso[task.logissue type=warning]$warningMessage"
-        Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
-    }
-    else {
-        Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
-    }
+# TODO: we should only run the below if anything has happened above ^^ ***
 
-} else {
-    Write-Host "RELEVANT_FILES_FOUND is false — skipping scan, check, and status tasks"
+# Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
+if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
+    $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
+    Write-Host $failMessage
+    Write-Host "##vso[task.logissue type=error]$failMessage"
+    Write-Host "##vso[task.complete result=Failed;]$failMessage"
+}
+elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
+    $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
+    Write-Host $failMessage
+    Write-Host "##vso[task.logissue type=error]$failMessage"
+    Write-Host "##vso[task.complete result=Failed;]$failMessage"
+}
+elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
+    $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+    Write-Host $warningMessage
+    Write-Host "##vso[task.logissue type=warning]$warningMessage"
+    Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
+}
+else {
+    Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
 }

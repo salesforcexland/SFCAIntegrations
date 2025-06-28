@@ -12,8 +12,8 @@
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
-    "Minor": 1,
-    "Patch": 12
+    "Minor": 2,
+    "Patch": 3
   },
   "inputs": [
     {
@@ -79,6 +79,14 @@
       "defaultValue": "false",
       "required": false,
       "helpMarkDown": "Boolean to dictate whether we POST comments to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    },
+    {
+      "name": "scanFullBranch",
+      "type": "boolean",
+      "label": "Scan full branch vs PR-only",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we're doing a full branch scan for the entire codebase, or only on valid PRs"
     }
   ],
   "execution": {
