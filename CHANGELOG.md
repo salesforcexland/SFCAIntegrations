@@ -3,8 +3,16 @@ All notable changes to this project will be documented in this file.
  
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
+
+## [1.2.0] - 2025-07-12
  
-## [1.1.x] - 2025-06-21
+### Added
+
+### Changed
+
+### Fixed 
+
+## [1.1.0] - 2025-06-21
  
 ### Added
 - New scanner output type of 'json' published as an artefact to the same directory, and used to assess severity-based violations instead of the output
@@ -15,4 +23,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Modified the extensionsToScan example to include other -meta.xml files that could be flagged by the Regex engine for having outdated apiVersions
 - Modified the POST subfunction to become extensible for other actions, not just POSTing the status check
 ### Fixed
+
  

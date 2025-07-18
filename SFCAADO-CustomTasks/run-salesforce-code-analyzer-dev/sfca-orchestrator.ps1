@@ -66,26 +66,37 @@ else {
 }
 
 # TODO: we should only run the below if anything has happened above ^^ ***
+# Custom logging function for the ADO Pipeline results
+function WriteTaskResult {
+    param( [string]$Message, [string]$Type, [string]$Result )
+    Write-Host $Message
+    Write-Host "##vso[task.logissue type=$Type]$Message"
+    Write-Host "##vso[task.complete result=$Result;]$Message"
+}
 
-# Final check to fail the build if needed (env var grabbed from CheckViolations.ps1) - TODO: to optimise logging
+# Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
 if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
     $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
-    Write-Host $failMessage
-    Write-Host "##vso[task.logissue type=error]$failMessage"
-    Write-Host "##vso[task.complete result=Failed;]$failMessage"
+    WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+    #Write-Host $failMessage
+    #Write-Host "##vso[task.logissue type=error]$failMessage"
+    #Write-Host "##vso[task.complete result=Failed;]$failMessage"
 }
 elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
     $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
-    Write-Host $failMessage
-    Write-Host "##vso[task.logissue type=error]$failMessage"
-    Write-Host "##vso[task.complete result=Failed;]$failMessage"
+    WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+    #Write-Host $failMessage
+    #Write-Host "##vso[task.logissue type=error]$failMessage"
+    #Write-Host "##vso[task.complete result=Failed;]$failMessage"
 }
 elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
     $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
-    Write-Host $warningMessage
-    Write-Host "##vso[task.logissue type=warning]$warningMessage"
-    Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
+    WriteTaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
+    #Write-Host $warningMessage
+    #Write-Host "##vso[task.logissue type=warning]$warningMessage"
+    #Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
 }
 else {
     Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
 }
+
