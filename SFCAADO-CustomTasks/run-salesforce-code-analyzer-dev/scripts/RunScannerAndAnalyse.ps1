@@ -13,7 +13,7 @@ sf plugins install code-analyzer@latest
 
 # 5. Run SFCA v5 scan
 Write-Host "Checked out branch ref is: $env:BUILD_SOURCEBRANCH"
-# If scanning the whole branch, use the sources directory.
+# If scanning the whole branch, use the sources directory and output the parent folders we find
 # If scanning only specific files, use the outputted files in the artefacts directory
 if ($env:SCAN_FULL_BRANCH -eq "true") {
     Write-Host "----------------------------------------"
@@ -32,6 +32,7 @@ $JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 
 Write-Host "Running scan on workspace: $workspacePath"
 # Output both HTML and JSON for usage later
+# TODO: if running a full branch scan, we could pass in a Graph Engine flag in future to override and run '--rule-selector sfge'
 $scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)

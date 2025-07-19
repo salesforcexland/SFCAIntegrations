@@ -1,12 +1,13 @@
 # Salesforce Code Analyzer for Azure DevOps
 
-This extension allows you to run Salesforce Code Analyzer v5 on the changed files in a pull request. It reports code violations, publishes results, and can fail the build to let you block merges. It follows a fail fast approach if there's no relevant files and skips the rest of the logic, gives you artifacts to analyse after a valid run, and provides detailed logs and feedback to that PR once complete.
+This extension allows you to run Salesforce Code Analyzer v5 on the changed files in a pull request, or against an entire branch. It reports code violations, publishes results, and can fail the build to let you block merges or identify technical debt in your overall codebase. It follows a fail fast approach if there's no relevant files and skips the rest of the logic, gives you artifacts to analyse after a valid run, and provides detailed logs and feedback to that PR once complete.
 
 ## Key Features
 
 - Threshold capabilities for the amount of issues you would accept before failing the build, or any issues above a particular severity
 - Installs and uses the latest version of Salesforce Code Analyzer, currently v5
-- Scans only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
+- Scans an entire selected branch (as a one-off or scheduled run) if desired
+- Can also scan only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
 - Outputs results as artifacts (html report, json file, and each changed file) for investigation
 - Optional PR status check POST onto the PR for extra visibility
 
@@ -22,7 +23,7 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 ## Usage
 
 1. Install this extension in your Azure DevOps organization.
-2. Add the task `Salesforce Code Analyzer - ADO PR Scan` to a YAML or Classic build pipeline, using the below example.
+2. Add the task `Salesforce Code Analyzer - ADO Scan` to a YAML or Classic build pipeline, using the below example.
 3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks, as outlined below.
 4. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD).
    - I'd recommend using the 'useSeverityThreshold' capability to be much more specific around what types of violation you'd like to fail builds on, rather than total violations.
@@ -31,14 +32,16 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 
 | Name                   | Required      | Type     | Description |
 |------------------------|---------------|----------|-------------|
-| `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
+| `extensionsToScan`     | No            | String   | Pipe-delimited list of file extensions to include, along with partnering -meta.xml files (default: `cls\|trigger\|js\|html\|page\|cmp\|component\|(\?:page\|cls\|trigger\|component\|js\|flow)-meta\\.xml`) |
 | `stopOnViolations`     | No            | Boolean  | Whether to fail the build if violations exceed threshold (default: `true`) |
-| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
-| `extensionsToScan`     | No            | String   | Pipe-delimited list of file extensions to include (default: `cls\|trigger\|js\|html\|page\|cmp\|component\|flow-meta.xml`) |
 | `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
 | `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
+| `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
+| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
+| `postCommentsToPR`  | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
+| `scanFullBranch`  | No            | Boolean  | Whether we want to run code analyzer against an entire branch rather than PR deltas (default: `false`) |
 
-## Example usage
+## Example usage - PRs
 
 ```yaml 
 trigger: none 
@@ -69,6 +72,52 @@ steps:
         postCommentsToPR: true
     env: 
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
+
+## Example usage - Full branch scans & PRs (in 1 yml)
+
+```yaml 
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+schedules:
+  - cron: "45 20 * * *" # Modify this accordingly to run on the right schedule
+    displayName: "Daily 21:45 BST run"
+    branches:
+      include:
+        - feature/SFCA-Custom-Task-Testing-v2 # Change this to be the full branch you want to scan, e.g 'main' or 'staging'
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
+
+  # Run this only if it's a PR
+  - task: run-salesforce-code-analyzer-dev@1
+    displayName: Run SFCA for PR
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      stopOnViolations: true
+      useSeverityThreshold: true
+      severityThreshold: '3'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+      postStatusCheckToPR: true
+      postCommentsToPR: true
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  # Run this only if it's *not* a PR (manual/CI/schedule) - this is dynamically determined
+  - task: run-salesforce-code-analyzer-dev@1
+    displayName: Run SFCA for Manual/CI/Scheduled
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      stopOnViolations: false
+      useSeverityThreshold: true
+      severityThreshold: '3'
+      scanFullBranch: true
 ```
 
 ## Links

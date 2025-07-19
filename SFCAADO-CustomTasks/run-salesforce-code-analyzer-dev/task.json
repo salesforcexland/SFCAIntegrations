@@ -1,19 +1,19 @@
 {
   "id": "5a1dfb21-3bcd-4ed7-9412-84e924b2e518",
   "name": "run-salesforce-code-analyzer-dev",
-  "friendlyName": "Salesforce Code Analyzer-ADO PR Scan-D",
-  "description": "Runs Salesforce Code Analyzer v5 against PR delta files in Azure DevOps and enforces violation thresholds.",
+  "friendlyName": "Salesforce Code Analyzer-ADO Scan-D",
+  "description": "Runs Salesforce Code Analyzer v5 against PRs or full branches and enforces violation thresholds.",
   "author": "Sam Crossland",
-  "helpMarkDown": "Only runs on pull requests and scans the changed files for code quality violations.",
+  "helpMarkDown": "Can run on PRs and find the changed files, or full branches, checking for code quality violations.",
   "category": "Build and release",
   "visibility": [ "Build" ],
   "runsOn": [ "Agent" ],
-  "instanceNameFormat": "SFCA PR Scan",
+  "instanceNameFormat": "SFCA Scan",
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
     "Minor": 2,
-    "Patch": 3
+    "Patch": 5
   },
   "inputs": [
     {

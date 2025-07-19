@@ -33,6 +33,7 @@ $env:SCAN_FULL_BRANCH = $SCAN_FULL_BRANCH
 
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
+    # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
     Write-Host "Scan full branch requested — skipping ScanDeltaFiles and running full scan on the branch '$env:BUILD_SOURCEBRANCH'."
     . "$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1"
 }
@@ -65,7 +66,6 @@ else {
     }
 }
 
-# TODO: we should only run the below if anything has happened above ^^ ***
 # Custom logging function for the ADO Pipeline results
 function WriteTaskResult {
     param( [string]$Message, [string]$Type, [string]$Result )
@@ -73,30 +73,28 @@ function WriteTaskResult {
     Write-Host "##vso[task.logissue type=$Type]$Message"
     Write-Host "##vso[task.complete result=$Result;]$Message"
 }
-
-# Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
-if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
-    $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
-    WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
-    #Write-Host $failMessage
-    #Write-Host "##vso[task.logissue type=error]$failMessage"
-    #Write-Host "##vso[task.complete result=Failed;]$failMessage"
-}
-elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
-    $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
-    WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
-    #Write-Host $failMessage
-    #Write-Host "##vso[task.logissue type=error]$failMessage"
-    #Write-Host "##vso[task.complete result=Failed;]$failMessage"
-}
-elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-    $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
-    WriteTaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
-    #Write-Host $warningMessage
-    #Write-Host "##vso[task.logissue type=warning]$warningMessage"
-    #Write-Host "##vso[task.complete result=SucceededWithIssues;]$warningMessage"
+# Considering the different routes a user could take via parameters, only check these if anything legitimate has happened
+if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
+    # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
+    if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
+        $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
+        WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+    }
+    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
+        $failMessage = "❌ Too many violations ($env:totalViolations/$MAXIMUM_VIOLATIONS) found and STOP_ON_VIOLATIONS = true — failing the build."
+        WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+    }
+    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
+        $warningMessage = "⚠️ Violations ($env:totalViolations) exceeded threshold ($MAXIMUM_VIOLATIONS), but STOP_ON_VIOLATIONS is false — build allowed to pass."
+        WriteTaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
+    }
+    else {
+        Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+    }
 }
 else {
-    Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+    $message = "No valid parameters passed for full branch or PR scan - build complete"
+    Write-Host "##vso[task.complete result=Succeeded;]$message"
 }
+
 
