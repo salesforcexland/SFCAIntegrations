@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.2.0] - 2025-07-12
+## [1.2.2] - 2025-07-23
  
 ### Added
 - Added the capability to run full branch scans instead of relying on PRs via the 'scanFullBranch' parameter, meaning you can conduct one-off/scheduled scans
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Descriptions and names of task and vss-extension json to move away from 'PR only' wording
 - Input table and example usage blocks of README/overview files to show full branch & PR usage 
 ### Fixed 
+- Logging issues for stopping on violations
 
 ## [1.1.0] - 2025-06-21
  
