@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Logging around PR vs full branch scan
 - Pipeline result logging function for use to wrap up the execution
+- Tighter logging for fail/warning/successful builds
 - Descriptions and names of task and vss-extension json to move away from 'PR only' wording
 - Input table and example usage blocks of README/overview files to show full branch & PR usage 
 ### Fixed 

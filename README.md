@@ -97,7 +97,7 @@ steps:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
-## Example usage - Full branch scans & PRs (in 1 yml)
+## Example usage - Full branch scans & PRs (in 1 yml, using conditions)
 
 ```yaml 
 trigger: none 
@@ -156,6 +156,8 @@ steps:
 ![ADO Extension](.github/images/extension.png)
 
 ![Pipeline yml](.github/images/pipelineyml.png)
+
+![Pipeline yml - full and PR](.github/images/pipelinesyml-fullandpr.png)
 
 ![PR Run](.github/images/pipelinerun.png)
 

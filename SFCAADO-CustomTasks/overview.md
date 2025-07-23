@@ -11,6 +11,10 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 - Outputs results as artifacts (html report, json file, and each changed file) for investigation
 - Optional PR status check POST onto the PR for extra visibility
 
+![Scan Example](images/pipelinerun.png)
+
+![Pipeline Complete](images/pipelinecomplete.png)
+
 ## Requirements
 
 - Azure DevOps (Cloud only), with an available build agent and permissions to configure the pipeline
@@ -74,7 +78,7 @@ steps:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
-## Example usage - Full branch scans & PRs (in 1 yml)
+## Example usage - Full branch scans & PRs (in 1 yml, using conditions)
 
 ```yaml 
 trigger: none 

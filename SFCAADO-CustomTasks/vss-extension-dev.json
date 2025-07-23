@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "salesforce-code-analyzer-ado-repos-task-dev",
   "name": "Salesforce Code Analyzer Task (DEV)",
-  "version": "1.2.6",
+  "version": "1.2.12",
   "publisher": "SamCrossland",
   "description": "Custom task to run Salesforce Code Analyzer v5 against PRs or full branches in your ADO Repo.",
   "categories": [ "Azure Pipelines" ],
@@ -48,6 +48,10 @@
   "files": [
     {
       "path": "run-salesforce-code-analyzer-dev",
+      "addressable": true
+    },
+    {
+      "path": "images",
       "addressable": true
     }
   ],
