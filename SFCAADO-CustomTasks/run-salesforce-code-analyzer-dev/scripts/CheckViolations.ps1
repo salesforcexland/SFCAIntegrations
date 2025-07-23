@@ -14,10 +14,12 @@ if (Test-Path $JSONOutputFilePath) {
         $threshold = $env:SEVERITY_THRESHOLD
         $severityExceededViolationsTotal = 0
         # Loop from threshold down to 1 (more severe)
+        $severityKeys = @($SFCAResultJSON.violationCounts.PSObject.Properties.Name)
+
         for ($i = [int]$threshold; $i -ge 1; $i--) {
             $sevKey = "sev$i"
             Write-Host "Searching for severity '$sevKey' violations:"
-            if ($SFCAResultJSON.violationCounts.PSObject.Properties.Name -contains $sevKey) {
+            if ($severityKeys -contains $sevKey) {
                 $sevKeyViolations = $SFCAResultJSON.violationCounts.$sevKey
                 $severityExceededViolationsTotal += $sevKeyViolations
                 Write-Warning "Found '$sevKeyViolations' violations for severity '$sevKey' - adding to the total"
