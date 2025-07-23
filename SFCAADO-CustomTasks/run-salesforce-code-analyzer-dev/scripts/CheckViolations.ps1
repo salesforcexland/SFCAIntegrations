@@ -33,13 +33,13 @@ if (Test-Path $JSONOutputFilePath) {
         # Regardless of the stop_on_violations, the violation threshold was exceeded
         $env:VIOLATIONS_EXCEEDED = "true"
     }
-    elseif ($env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS -and $env:STOP_ON_VIOLATIONS -eq "true") {
-        Write-Host "Too many violations '$env:totalViolations' found — above the threshold of '$env:MAXIMUM_VIOLATIONS'"
+    elseif ($env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) {
+        Write-Host "Too many violations '$env:totalViolations' found — above the maximum violation threshold of '$env:MAXIMUM_VIOLATIONS'"
         $env:VIOLATIONS_EXCEEDED = "true"
-        Write-Warning "Failing the build. See the HTML file in Published Artifacts for details."
+        Write-Warning "Set VIOLATIONS_EXCEEDED to 'true' and passing back to orchestrator to determine exit state"
     }
     else {
-        Write-Host "Violations are within acceptable threshold or STOP_ON_VIOLATIONS is false — build allowed to pass."
+        Write-Host "Violations '$env:totalViolations' are within acceptable threshold — build allowed to pass."
     }
 } else {
     Write-Warning "Results file not found at path: '$JSONOutputFilePath' - aborting"

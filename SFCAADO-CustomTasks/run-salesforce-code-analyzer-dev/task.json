@@ -1,19 +1,19 @@
 {
   "id": "5a1dfb21-3bcd-4ed7-9412-84e924b2e518",
   "name": "run-salesforce-code-analyzer-dev",
-  "friendlyName": "Salesforce Code Analyzer-ADO PR Scan-D",
-  "description": "Runs Salesforce Code Analyzer v5 against PR delta files in Azure DevOps and enforces violation thresholds.",
+  "friendlyName": "Salesforce Code Analyzer-ADO Scan-D",
+  "description": "Runs Salesforce Code Analyzer v5 against PRs or full branches and enforces violation thresholds.",
   "author": "Sam Crossland",
-  "helpMarkDown": "Only runs on pull requests and scans the changed files for code quality violations.",
+  "helpMarkDown": "Can run on PRs and find the changed files, or full branches, checking for code quality violations.",
   "category": "Build and release",
   "visibility": [ "Build" ],
   "runsOn": [ "Agent" ],
-  "instanceNameFormat": "SFCA PR Scan",
+  "instanceNameFormat": "SFCA Scan",
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
-    "Minor": 1,
-    "Patch": 12
+    "Minor": 2,
+    "Patch": 15
   },
   "inputs": [
     {
@@ -79,10 +79,18 @@
       "defaultValue": "false",
       "required": false,
       "helpMarkDown": "Boolean to dictate whether we POST comments to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    },
+    {
+      "name": "scanFullBranch",
+      "type": "boolean",
+      "label": "Scan full branch vs PR-only",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we're doing a full branch scan for the entire codebase, or only on valid PRs"
     }
   ],
   "execution": {
-    "Node10": {
+    "Node20_1": {
       "target": "sfca-orchestrator.js"
     }
   }
