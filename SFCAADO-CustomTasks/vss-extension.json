@@ -1,10 +1,10 @@
 {
   "manifestVersion": 1,
   "id": "salesforce-code-analyzer-ado-repos-task",
-  "name": "Salesforce Code Analyzer PR Task",
-  "version": "1.0.0",
+  "name": "Salesforce Code Analyzer Task",
+  "version": "1.2.0",
   "publisher": "SamCrossland",
-  "description": "Custom task to run Salesforce Code Analyzer v5 against PR delta files in Azure DevOps.",
+  "description": "Custom task to run Salesforce Code Analyzer v5 against PRs or full branches in Azure DevOps.",
   "categories": [ "Azure Pipelines" ],
   "content": {
     "details": {
@@ -47,6 +47,10 @@
   "files": [
     {
       "path": "run-salesforce-code-analyzer",
+      "addressable": true
+    },
+    {
+      "path": "images",
       "addressable": true
     }
   ],
