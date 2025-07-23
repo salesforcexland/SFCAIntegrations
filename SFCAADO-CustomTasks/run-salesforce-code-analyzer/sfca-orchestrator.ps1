@@ -101,5 +101,3 @@ else {
     $message = "No valid parameters passed for full branch or PR scan - build complete"
     Write-Host "##vso[task.complete result=Succeeded;]$message"
 }
-
-

@@ -1,6 +1,6 @@
 # Salesforce Code Analyzer - Azure DevOps PR Scan Task
 
-This Azure DevOps [extension](https://marketplace.visualstudio.com/items?itemName=SamCrossland.salesforce-code-analyzer-ado-repos-task) provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts a status check back to the PR.
+This Azure DevOps [extension](https://marketplace.visualstudio.com/items?itemName=SamCrossland.salesforce-code-analyzer-ado-repos-task) provides a custom pipeline task that runs **Salesforce Code Analyzer v5** against PR-only delta changes in your Salesforce codebase. It supports configurable failure criteria, publishes scan artifacts, and optionally posts attributes back to the PR.
 
 See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed blog for further information.
 
@@ -8,13 +8,13 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## 🔍 What It Does
 
-- Detects delta files in PRs (`cls`, `trigger`, `js`, `html`, `cmp`, `flow-meta.xml`, etc.)
+- Detects delta files in PRs (`cls`, `trigger`, `js`, `html`, `cmp`, `*-meta.xml`, etc.)
 - Runs [Salesforce Code Analyzer v5](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/overview)
 - Supports **two failure modes**:
   - Max total violations exceeded
   - Any violations exceeding a **severity threshold** (Info → Critical)
-- Publishes HTML scan results and delta files as pipeline artifacts
-- Optionally posts a **status check** to the PR with success/failure
+- Publishes HTML/JSON scan results and delta files as pipeline artifacts
+- Optionally posts a **status check** to the PR with success/failure and/or **comments** summarising the results too
 
 ---
 

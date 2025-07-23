@@ -31,7 +31,9 @@
         "uri": "https://github.com/salesforcexland/SFCAIntegrations"
   },
   "targets": [
-    { "id": "Microsoft.VisualStudio.Services" }
+    { 
+      "id": "Microsoft.VisualStudio.Services.Cloud" 
+    }
   ],
   "galleryFlags": [
     "AzureDevOps",
