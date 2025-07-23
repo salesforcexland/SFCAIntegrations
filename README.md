@@ -119,7 +119,7 @@ steps:
     fetchDepth: 0 # Make sure we're overriding 'shallow fetch' here to retrieve all git history
 
   # Run this only if it's a PR
-  - task: run-salesforce-code-analyzer-dev@1
+  - task: run-salesforce-code-analyzer@1
     displayName: Run SFCA for PR
     condition: eq(variables['Build.Reason'], 'PullRequest')
     inputs:
@@ -133,7 +133,7 @@ steps:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
   # Run this only if it's *not* a PR (manual/CI/schedule) - this is dynamically determined
-  - task: run-salesforce-code-analyzer-dev@1
+  - task: run-salesforce-code-analyzer@1
     displayName: Run SFCA for Manual/CI/Scheduled
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
