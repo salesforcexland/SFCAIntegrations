@@ -67,29 +67,34 @@ else {
 }
 
 # Custom logging function for the ADO Pipeline results
-function WriteTaskResult {
+function Write-TaskResult {
     param( [string]$Message, [string]$Type, [string]$Result )
     Write-Host $Message
-    Write-Host "##vso[task.logissue type=$Type]$Message"
+    if ($Type) {
+        # Only push logissue if a type was passed (error or warning, since success doesn't exist)
+        Write-Host "##vso[task.logissue type=$Type]$Message"
+    }
     Write-Host "##vso[task.complete result=$Result;]$Message"
 }
+
 # Considering the different routes a user could take via parameters, only check these if anything legitimate has happened
 if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
     if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
         $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
-        WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+        Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
         $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found and STOP_ON_VIOLATIONS = true — failing the build."
-        WriteTaskResult -Message $failMessage -Type 'error' -Result 'Failed'
+        Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
         $warningMessage = "⚠️ Violations '$env:totalViolations' exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
-        WriteTaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
+        Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     else {
-        Write-Host "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+        $passMessage = "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+        Write-TaskResult -Message $passMessage -Result 'Succeeded'
     }
 }
 else {

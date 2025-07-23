@@ -6,7 +6,7 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 
 - Threshold capabilities for the amount of issues you would accept before failing the build, or any issues above a particular severity
 - Installs and uses the latest version of Salesforce Code Analyzer, currently v5
-- Scans an entire selected branch (as a one-off or scheduled run) if desired
+- Scans an entire selected branch (as a one-off or scheduled run using cron) if desired
 - Can also scan only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
 - Outputs results as artifacts (html report, json file, and each changed file) for investigation
 - Optional PR status check POST onto the PR for extra visibility
@@ -20,16 +20,17 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 - Azure DevOps (Cloud only), with an available build agent and permissions to configure the pipeline
 - Pipeline must run on `ubuntu-latest`
 - Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
-- `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing
-- Pull request build validation setup using a .yml file and ADO Build Policies
-- Your build user having 'Contribute to pull requests' permission if using the 'postStatusCheckToPR' option
+- `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing (if running on PRs)
+- Pull request build validation setup using a .yml file (present on all relevant branches) and ADO Build Policies/Schedules to trigger it
+- Your build user having 'Contribute to pull requests' permission if using the 'postStatusCheckToPR' option (if running on PRs)
 
 ## Usage
 
 1. Install this extension in your Azure DevOps organization.
 2. Add the task `Salesforce Code Analyzer - ADO Scan` to a YAML or Classic build pipeline, using the below example.
 3. Assess parameters like `maximumViolations` or `postStatusCheckToPR` to create the right combination for your checks, as outlined below.
-4. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD).
+4. Consider whether you'd like SFCA to run on PRs only, full branches, or a combination of both (second example)
+5. Consider if you would like to fail builds on total violations, or any issues above a particular severity threshold as outlined [here](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#:~:text=t%20%7C%20%2D%2D-,severity,-%2Dthreshold%20SEVERITY%2DTHRESHOLD).
    - I'd recommend using the 'useSeverityThreshold' capability to be much more specific around what types of violation you'd like to fail builds on, rather than total violations.
 
 ## Task Inputs
