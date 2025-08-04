@@ -20,6 +20,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ## ✅ Requirements
 
+- Currently this extension work for Azure Repositories and Azure Pipelines, not GitHub Repositories linking into Azure
 - Pipeline must run on `ubuntu-latest`
 - Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
 - PR build validation policies must be set up to control trigger behavior
