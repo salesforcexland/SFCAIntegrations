@@ -2,6 +2,8 @@
 
 This extension allows you to run Salesforce Code Analyzer v5 on the changed files in a pull request, or against an entire branch. It reports code violations, publishes results, and can fail the build to let you block merges or identify technical debt in your overall codebase. It follows a fail fast approach if there's no relevant files and skips the rest of the logic, gives you artifacts to analyse after a valid run, and provides detailed logs and feedback to that PR once complete.
 
+**NOTE: This extension only currently functions for Azure DevOps Services (Cloud), and NOT Azure DevOps Server (On prem)**
+
 ## Key Features
 
 - Threshold capabilities for the amount of issues you would accept before failing the build, or any issues above a particular severity

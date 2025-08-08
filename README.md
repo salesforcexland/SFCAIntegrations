@@ -4,6 +4,8 @@ This Azure DevOps [extension](https://marketplace.visualstudio.com/items?itemNam
 
 See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed blog for further information.
 
+**NOTE: This extension only currently functions for Azure DevOps Services (Cloud), and NOT Azure DevOps Server (On prem)**
+
 ---
 
 ## 🔍 What It Does
