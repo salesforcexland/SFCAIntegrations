@@ -33,11 +33,17 @@ if (Test-Path $JSONOutputFilePath) {
         # Regardless of the stop_on_violations, the violation threshold was exceeded
         $env:VIOLATIONS_EXCEEDED = "true"
     }
-    elseif ($env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) {
+    # If we're using severity threshold, but the exit code is 0 from the scanner (meaning we haven't exceeded), then by default we can't be exceeding the total
+    elseif (($env:USE_SEVERITY_THRESHOLD -eq "true") -and ($env:SFScanExitCode -eq 0)) {
+        Write-Host "Violations '$env:totalViolations' found do not exceed the severity specified build allow to pass."
+    }
+    # If we're not using severity threshold, and the total violations found exceeds the maximum violations (defaulted to 10), we fail
+    elseif (($env:USE_SEVERITY_THRESHOLD -eq "false") -and $env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) {
         Write-Host "Too many violations '$env:totalViolations' found — above the maximum violation threshold of '$env:MAXIMUM_VIOLATIONS'"
         $env:VIOLATIONS_EXCEEDED = "true"
         Write-Warning "Set VIOLATIONS_EXCEEDED to 'true' and passing back to orchestrator to determine exit state"
     }
+    # Anything else and the violations must be in an acceptable state, so we pass again
     else {
         Write-Host "Violations '$env:totalViolations' are within acceptable threshold — build allowed to pass."
     }

@@ -1,6 +1,12 @@
-if ((($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) -and -not $env:SYSTEM_ACCESSTOKEN) {
-    Write-Error "Missing SYSTEM_ACCESSTOKEN. Please add 'env: SYSTEM_ACCESSTOKEN: '\`$(System.AccessToken)' to the task declaration in your pipeline YAML to use PR POSTing."
-    exit 1
+if ((($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) -and ((-not $env:SYSTEM_ACCESSTOKEN) -or (-not $env:GITHUB_TOKEN))) {
+    if ($REPO_PROVIDER -eq "TfsGit" -and -not $env:SYSTEM_ACCESSTOKEN) {
+          Write-Error "Missing SYSTEM_ACCESSTOKEN. Please add 'env: SYSTEM_ACCESSTOKEN: '\`$(System.AccessToken)' to the task declaration in your pipeline YAML to use PR POSTing."
+          exit 1
+    }
+    if ($REPO_PROVIDER -eq "GitHub" -and -not $env:GITHUB_TOKEN) {
+          Write-Error "Missing GITHUB_TOKEN environment variable. Set a GitHub personal access token to post comments."
+          exit 1
+    }  
 }
 
 # Set up all necessary variables from ADO environment attributes and construct URLs/headers for any calls
@@ -45,8 +51,9 @@ if ($POST_STATUS_CHECK_TO_PR -eq "true") {
     }
 }
 
+ #TODO: CONSOLIDATE THE BELOW 2 INTO 1 IF
 # POSTing summary comment to PR logic, linking to the published artefacts directly for easier access to the HTML/JSON reports
-if ($POST_COMMENTS_TO_PR -eq "true") {
+if ($REPO_PROVIDER -eq "TfsGit" -and $POST_COMMENTS_TO_PR -eq "true") {
   $publishedArtefactURL = "$buildUrl&view=artifacts&type=publishedArtifacts"
   # Construct comment body linking to published artefacts
   $commentBody = @{
@@ -64,5 +71,35 @@ if ($POST_COMMENTS_TO_PR -eq "true") {
       Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
     } catch {
       Write-Warning "Failed to post comment: $_"
+    }
+}
+
+$GITHUB_TOKEN = $env:GITHUB_TOKEN
+# Use $token to authenticate GitHub API calls
+
+if ($REPO_PROVIDER -eq "GitHub" -and $POST_COMMENTS_TO_PR -eq "true") {
+    # Extract owner, repo from BUILD_REPOSITORY_NAME (e.g. "owner/repo")
+    $repoFullName = $env:BUILD_REPOSITORY_NAME
+    $prNumber = $env:SYSTEM_PULLREQUEST_PULLREQUESTNUMBER  # GitHub uses PR number, not ID
+
+    $commentBody = @{
+        body = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($buildUrl)"
+    } | ConvertTo-Json -Compress
+
+    $headers = @{
+        "Authorization" = "token $($env:GITHUB_TOKEN)"
+        "Accept" = "application/vnd.github+json"
+        "User-Agent" = "AzureDevOpsPipeline"  # GitHub API requires a User-Agent header
+    }
+
+    $commentUrl = "https://api.github.com/repos/$repoFullName/issues/$prNumber/comments"
+
+    Write-Host "Posting comment to GitHub PR #$prNumber at URL: $commentUrl"
+
+    try {
+        $response = Invoke-RestMethod -Uri $commentUrl -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
+        Write-Host "Successfully posted GitHub PR comment: $($response.html_url)"
+    } catch {
+        Write-Warning "Failed to post GitHub comment: $_"
     }
 }
