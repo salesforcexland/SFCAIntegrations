@@ -28,39 +28,46 @@ $headers = @{
 
 # POSTing status check to PR logic, with custom link to the pipeline information
 # NOTE - Only valid for ADO PRs - GitHub PRs already expose this by default so no extra POST required
-if ($REPO_PROVIDER -eq "TfsGit" -and $POST_STATUS_CHECK_TO_PR -eq "true") {
-  $statusState = if ($env:VIOLATIONS_EXCEEDED -eq "true") { "failed" } else { "succeeded" }
+if ($POST_STATUS_CHECK_TO_PR -eq "true") {
+    switch ($REPO_PROVIDER) {
+      "TfsGit" {
+            $statusState = if ($env:VIOLATIONS_EXCEEDED -eq "true") { "failed" } else { "succeeded" }
+            $status = @{
+              "state" = $statusState
+              "description" = "Code analysis completed with $totalViolations total violations (all severities). View more pipeline details at: $buildUrl"
+              "targetUrl" = $buildUrl
+              "context" = @{
+                "name" = "Salesforce Code Analyzer - Scan"
+                "genre" = "SFCAPipeline"
+              }
+            }
 
-  $status = @{
-    "state" = $statusState
-    "description" = "Code analysis completed with $totalViolations total violations (all severities). View more pipeline details at: $buildUrl"
-    "targetUrl" = $buildUrl
-    "context" = @{
-      "name" = "Salesforce Code Analyzer - Scan"
-      "genre" = "SFCAPipeline"
-    }
-  }
+            $statusJson = $status | ConvertTo-Json -Compress
+            $url = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/statuses?api-version=7.1"
+            Write-Host "Posting status to pull request at URL: '$url' with status JSON of: '$statusJson'"
 
-  $statusJson = $status | ConvertTo-Json -Compress
-  $url = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/statuses?api-version=7.1"
-  Write-Host "Posting status to pull request at URL: '$url' with status JSON of: '$statusJson'"
-
-  try {
-      $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $statusJson -ErrorAction Stop
-      Write-Host "Successfully posted status to PR: $($response.context.name) — $($response.state)"
-    } catch {
-      Write-Warning "Failed to post status: $_"
+            try {
+                $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $statusJson -ErrorAction Stop
+                Write-Host "Successfully posted status to PR: $($response.context.name) — $($response.state)"
+              } catch {
+                Write-Warning "Failed to post status: $_"
+              }
+      }
+      "GitHub" {
+              Write-Warning "GitHub Status checks are implicitly available, so no extra POST is required - skipping PR status check POST."
+      }
+      default {
+              Write-Warning "Unsupported REPO_PROVIDER '$REPO_PROVIDER' — skipping PR status check POST."
+      }
     }
 }
 
 # Check if we're POSTing comments to the PR and which provider route we need to take
 if ($POST_COMMENTS_TO_PR -eq "true") {
-    # Shared comment text
     $commentText = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($publishedArtefactURL)"
     # Provider-specific config
     switch ($REPO_PROVIDER) {
         "TfsGit" {
-            
             $commentBody = @{
                 comments = @(@{
                     content = $commentText

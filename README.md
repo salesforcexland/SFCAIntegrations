@@ -37,7 +37,7 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 | `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
 | `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
-| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (default: `false`) |
+| `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (ADO REPOS ONLY) (default: `false`) |
 | `postCommentsToPR`  | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
 | `scanFullBranch`  | No            | Boolean  | Whether we want to run code analyzer against an entire branch rather than PR deltas (default: `false`) |
 
