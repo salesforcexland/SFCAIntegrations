@@ -12,11 +12,11 @@ if ($BUILD_REASON -match 'PullRequest') {
         $TARGET_BRANCH_NAME = $env:SYSTEM_PULLREQUEST_TARGETBRANCH -replace '^refs/heads/', ''
 
         Write-Host "GitHub PR - Source: $SOURCE_BRANCH_NAME, Target: $TARGET_BRANCH_NAME - explicitly fetching"
-
-        # Fetch branches explicitly
+        # Fetch branches explicitly due to the way GitHub doesn't auto retrieve the target branch details we need for diffing
+        
         git fetch origin +refs/heads/${SOURCE_BRANCH_NAME}:refs/remotes/origin/${SOURCE_BRANCH_NAME}
         git fetch origin +refs/heads/${TARGET_BRANCH_NAME}:refs/remotes/origin/${TARGET_BRANCH_NAME}
-        git branch -a
+        #git branch -a # Only for debugging
         $TARGET_BRANCH = "refs/remotes/origin/$TARGET_BRANCH_NAME"
         $SOURCE_BRANCH = "refs/remotes/origin/$SOURCE_BRANCH_NAME"
     } else {

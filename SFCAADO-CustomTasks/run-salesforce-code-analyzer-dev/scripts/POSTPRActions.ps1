@@ -19,6 +19,7 @@ $buildUrl = "$env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI$escapedProject/_build/resul
   
 $collectionUri = $env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI
 Write-Host "Organization is '$collectionUri' and project is '$escapedProject'"
+$publishedArtefactURL = "$buildUrl&view=artifacts&type=publishedArtifacts"
 
 $headers = @{
   "Content-Type" = "application/json"
@@ -26,7 +27,8 @@ $headers = @{
 }
 
 # POSTing status check to PR logic, with custom link to the pipeline information
-if ($POST_STATUS_CHECK_TO_PR -eq "true") {
+# NOTE - Only valid for ADO PRs - GitHub PRs already expose this by default so no extra POST required
+if ($REPO_PROVIDER -eq "TfsGit" -and $POST_STATUS_CHECK_TO_PR -eq "true") {
   $statusState = if ($env:VIOLATIONS_EXCEEDED -eq "true") { "failed" } else { "succeeded" }
 
   $status = @{
@@ -51,55 +53,59 @@ if ($POST_STATUS_CHECK_TO_PR -eq "true") {
     }
 }
 
- #TODO: CONSOLIDATE THE BELOW 2 INTO 1 IF
-# POSTing summary comment to PR logic, linking to the published artefacts directly for easier access to the HTML/JSON reports
-if ($REPO_PROVIDER -eq "TfsGit" -and $POST_COMMENTS_TO_PR -eq "true") {
-  $publishedArtefactURL = "$buildUrl&view=artifacts&type=publishedArtifacts"
-  # Construct comment body linking to published artefacts
-  $commentBody = @{
-      comments = @(@{
-          content = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($publishedArtefactURL)"
-          commentType = "text"
-      })
-      status = "active"
-  } | ConvertTo-Json -Depth 3
+# Check if we're POSTing comments to the PR and which provider route we need to take
+if ($POST_COMMENTS_TO_PR -eq "true") {
+    # Shared comment text
+    $commentText = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($publishedArtefactURL)"
+    # Provider-specific config
+    switch ($REPO_PROVIDER) {
+        "TfsGit" {
+            
+            $commentBody = @{
+                comments = @(@{
+                    content = $commentText
+                    commentType = "text"
+                })
+                status = "active"
+            } | ConvertTo-Json -Depth 3
 
-  # PR thread endpoint
-  $commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/threads?api-version=7.1"
-  try {
-      $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
-      Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
-    } catch {
-      Write-Warning "Failed to post comment: $_"
+            $commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/threads?api-version=7.1"
+            $headers = $headers # Already set earlier for ADO API in case we're POSTing a status too
+        }
+        "GitHub" {
+            $repoFullName = $env:BUILD_REPOSITORY_NAME
+            $prNumber     = $env:SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
+
+            $commentBody = @{
+                body = $commentText
+            } | ConvertTo-Json -Compress
+
+            $headers = @{
+                "Authorization" = "token $($env:GITHUB_TOKEN)"
+                "Accept"        = "application/vnd.github+json"
+                "User-Agent"    = "AzureDevOpsPipeline"
+            }
+
+            $commentURI = "https://api.github.com/repos/$repoFullName/issues/$prNumber/comments"
+        }
+        default {
+            Write-Warning "Unsupported REPO_PROVIDER '$REPO_PROVIDER' — skipping PR comment."
+            return
+        }
     }
-}
 
-$GITHUB_TOKEN = $env:GITHUB_TOKEN
-# Use $token to authenticate GitHub API calls
-
-if ($REPO_PROVIDER -eq "GitHub" -and $POST_COMMENTS_TO_PR -eq "true") {
-    # Extract owner, repo from BUILD_REPOSITORY_NAME (e.g. "owner/repo")
-    $repoFullName = $env:BUILD_REPOSITORY_NAME
-    $prNumber = $env:SYSTEM_PULLREQUEST_PULLREQUESTNUMBER  # GitHub uses PR number, not ID
-
-    $commentBody = @{
-        body = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($buildUrl)"
-    } | ConvertTo-Json -Compress
-
-    $headers = @{
-        "Authorization" = "token $($env:GITHUB_TOKEN)"
-        "Accept" = "application/vnd.github+json"
-        "User-Agent" = "AzureDevOpsPipeline"  # GitHub API requires a User-Agent header
-    }
-
-    $commentUrl = "https://api.github.com/repos/$repoFullName/issues/$prNumber/comments"
-
-    Write-Host "Posting comment to GitHub PR #$prNumber at URL: $commentUrl"
-
+    # Post comment
     try {
-        $response = Invoke-RestMethod -Uri $commentUrl -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
-        Write-Host "Successfully posted GitHub PR comment: $($response.html_url)"
+        Write-Host "Posting comment to $REPO_PROVIDER PR at URL: $commentURI"
+        $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
+
+        if ($REPO_PROVIDER -eq "TfsGit") {
+            Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
+        }
+        elseif ($REPO_PROVIDER -eq "GitHub") {
+            Write-Host "Successfully posted GitHub PR comment: $($response.html_url)"
+        }
     } catch {
-        Write-Warning "Failed to post GitHub comment: $_"
+        Write-Warning "Failed to post PR comment for '$REPO_PROVIDER': $_"
     }
 }
