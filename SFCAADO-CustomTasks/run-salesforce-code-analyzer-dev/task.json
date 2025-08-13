@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 3,
-    "Patch": 14
+    "Patch": 18
   },
   "inputs": [
     {
@@ -87,6 +87,14 @@
       "defaultValue": "false",
       "required": false,
       "helpMarkDown": "Boolean to dictate whether we're doing a full branch scan for the entire codebase, or only on valid PRs"
+    },
+    {
+      "name": "configFilePath",
+      "type": "string",
+      "label": "Code Analyzer configuration filepath",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Optional absolute path to a custom Salesforce Code Analyzer configuration file (e.g ./config/code-analyzer.yml)"
     }
   ],
   "execution": {

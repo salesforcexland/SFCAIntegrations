@@ -1,5 +1,33 @@
 Write-Host "Starting Salesforce Code Analyzer v5 scan step..."
 
+# TODO: Check if we've got a custom code-analyzer.yml file passed in, and verify it exists first - FAIL EARLY HERE
+if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
+    # Logic here to test it and validate, then copy to a a build/published location for further use
+    $rawPath = $env:CONFIG_FILE_PATH
+    # Resolve to absolute path
+    if (-not (Split-Path $rawPath -IsAbsolute)) {
+        $configFilePath = Join-Path $env:BUILD_SOURCESDIRECTORY $rawPath
+    } else {
+        $configFilePath = $rawPath
+    }
+    Write-Host "Config file provided and absolute path resolved to be '$configFilePath' - checking it exists ready for copying"
+    if (Test-Path $configFilePath -PathType Leaf) {
+        # Create a dedicated folder in the staging directory
+        $configFolder = Join-Path $env:BUILD_STAGINGDIRECTORY "salesforce-code-analyzer-config"
+        New-Item -ItemType Directory -Force -Path $configFolder | Out-Null
+
+        # Copy the YAML config into that folder
+        $CodeAnalyzerYmlFilePath = Join-Path $configFolder "code-analyzer.yml"
+        Copy-Item -Path $configFilePath -Destination $CodeAnalyzerYmlFilePath -Force
+        Write-Host "Config file copied to the build staging directory at '$configFilePath'"
+        $ConfigFileValid = $true
+    }
+    else {
+        Write-Warning "⚠ Config file not found at: '$CodeAnalyzerYmlFilePath'. Proceeding without it."
+        exit 1
+    }
+}
+
 # 3. Install SF CLI (latest)
 Write-Host "Installing Salesforce CLI:"
 npm install -g @salesforce/cli@latest
@@ -37,6 +65,10 @@ $scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePat
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }
+if($ConfigFileValid) {
+    Write-Host "Config file '$CodeAnalyzerYmlFilePath' available - adding to the scan args"
+    $scanArgs += @("--config-file", $CodeAnalyzerYmlFilePath)
+}
 
 Write-Host "Scan args to pass to 'sf code-analyzer run' are: '$scanArgs'"
 # Run and capture both std outputs/errors and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
@@ -64,4 +96,5 @@ else {
 # 6. Publish the results as a pipeline artifact
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$HTMLOutputFilePath"
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$JSONOutputFilePath"
+Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-config]$configFolder"
 Write-Host "Scan complete. Results published as artifact: salesforce-code-analyzer-results"

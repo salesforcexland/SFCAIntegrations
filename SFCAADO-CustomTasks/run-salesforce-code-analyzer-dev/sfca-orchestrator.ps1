@@ -31,6 +31,10 @@ $SCAN_FULL_BRANCH = $env:INPUT_SCANFULLBRANCH
 Write-Host "Set SCAN_FULL_BRANCH to: $SCAN_FULL_BRANCH"
 $env:SCAN_FULL_BRANCH = $SCAN_FULL_BRANCH
 
+$CONFIG_FILE_PATH = $env:INPUT_CONFIGFILEPATH
+Write-Host "Set CONFIG_FILE_PATH to: $CONFIG_FILE_PATH"
+$env:CONFIG_FILE_PATH = $CONFIG_FILE_PATH
+
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
     # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
