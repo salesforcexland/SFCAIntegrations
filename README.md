@@ -43,6 +43,17 @@ See [this](https://devopslaunchpad.com/blog/salesforce-code-analyzer/) detailed 
 
 ---
 
+## Configuration file + Rule selector
+
+TODO: KEY INFO/CAVEATS HERE
+ - Link to example code-analyzer.yml files i've set up, mainly a thinned down and full version, with example log/rule overrides
+ - Explain the nuances for rule selector and link with severity
+ - Explain the lack of support (currently) for extra config files (eslint, pmd etc) due to the relative path problem
+
+## GitHub support
+- Reference example yml file in the github repo and link to ADO pipeline
+- github token and perms being required
+
 ## 🔐 Required Permissions
 
 If `postStatusCheckToPR` or `postCommentsToPR` are `true`, you must add the following to your pipeline YAML:

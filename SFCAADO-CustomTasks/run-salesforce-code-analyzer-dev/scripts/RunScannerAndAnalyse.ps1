@@ -1,6 +1,6 @@
 Write-Host "Starting Salesforce Code Analyzer v5 scan step..."
 
-# TODO: Check if we've got a custom code-analyzer.yml file passed in, and verify it exists first - FAIL EARLY HERE
+# Check if we've got a custom code-analyzer.yml/yaml file passed in, and verify it exists first - failing early here
 if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
     # Logic here to test it and validate, then copy to a a build/published location for further use
     $rawPath = $env:CONFIG_FILE_PATH
@@ -10,8 +10,8 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
     } else {
         $configFilePath = $rawPath
     }
-    Write-Host "Config file provided and absolute path resolved to be '$configFilePath' - checking it exists ready for copying"
-    if (Test-Path $configFilePath -PathType Leaf) {
+    Write-Host "Config file provided at raw path of '$rawPath' and absolute path resolved to be '$configFilePath' - checking it exists (as yml) and is ready for copying"
+    if ((Test-Path $configFilePath -PathType Leaf) -and ($configFilePath.ToLower().EndsWith(".yml") -or $configFilePath.ToLower().EndsWith(".yaml"))) {
         # Create a dedicated folder in the staging directory
         $configFolder = Join-Path $env:BUILD_STAGINGDIRECTORY "salesforce-code-analyzer-config"
         New-Item -ItemType Directory -Force -Path $configFolder | Out-Null
@@ -19,12 +19,11 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
         # Copy the YAML config into that folder
         $CodeAnalyzerYmlFilePath = Join-Path $configFolder "code-analyzer.yml"
         Copy-Item -Path $configFilePath -Destination $CodeAnalyzerYmlFilePath -Force
-        Write-Host "Config file copied to the build staging directory at '$configFilePath'"
+        Write-Host "Config file '$configFilePath' copied to the build staging directory at '$CodeAnalyzerYmlFilePath'"
         $ConfigFileValid = $true
     }
     else {
-        Write-Warning "⚠ Config file not found at: '$CodeAnalyzerYmlFilePath'. Proceeding without it."
-        exit 1
+        Write-Warning "⚠ Config file not found at: '$configFilePath'. Proceeding without it."
     }
 }
 
@@ -61,7 +60,7 @@ $JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 Write-Host "Running scan on workspace: $workspacePath"
 # Output both HTML and JSON for usage later
 # TODO: if running a full branch scan, we could pass in a Graph Engine flag in future to override and run '--rule-selector sfge'
-$scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
+$scanArgs = @("--rule-selector", $env:RULE_SELECTOR, "--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }
@@ -90,11 +89,15 @@ elseif ($scanOutput -match 'Found\s+(\d+)\s+violation') {
     $env:totalViolations = $totalViolations
 } 
 else {
-    Write-Warning "Could not parse total violations from scan output or JSON."
+    Write-Error "Could not parse total violations from scan output or JSON - cannot proceed."
+    exit 1
 }
 
 # 6. Publish the results as a pipeline artifact
+Write-Host "Scan complete. Uploading HTML and JSON outputs to 'salesforce-code-analyzer-results' in published artefacts"
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$HTMLOutputFilePath"
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$JSONOutputFilePath"
-Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-config]$configFolder"
-Write-Host "Scan complete. Results published as artifact: salesforce-code-analyzer-results"
+if($ConfigFileValid) {
+    Write-Host "Valid config file found and used - uploading config folder to 'salesforce-code-analyzer-config' in published artefacts"
+    Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-config]$configFolder"
+}
