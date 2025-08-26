@@ -69,8 +69,8 @@ env:
   - You need to ensure the code-analyzer.yml file is present on all branches relevant for PR/full scans, or it'll get skipped
   - Consider starting with the example yml files i've provided HERE, with example log/rule overrides
   - Ensure the `config_root:` property is left as `null` to allow dynamic passing of log outputs
-  - There is currently a lack of support for extra config files (eslint, pmd etc) due to a relative path problem - this will be tackled in a future update
-  - This could also contradict/cause confusion with the severity threshold and rule selector in terms of severities scanned and reported on
+  - There is currently a lack of support for extra config files (eslint, pmd etc) due to a copy and relative path problem - this will be tackled in a future update
+  - Some config could also contradict/cause confusion with the severity threshold and rule selector in terms of severities scanned and reported on
 
 ---
 

@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Logic around gathering git diff source/target branch details between ADO and GitHub
 ### Fixed 
 - Logging issues around full branch scan vs delta PRs
-- Severity threshold vs max violation logic issues
+- Severity threshold vs max violation gnarly logic issues
 
 ## [1.2.2] - 2025-07-23
  
