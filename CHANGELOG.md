@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.3.0] - 2025-08-26
+ 
+### Added
+- Added the capability to leverage the code-analyzer.yml configuration file (with parameter)
+- Added the ability to override the --rule-selector flag to use specific engines and/or tags (with parameter)
+- Allowed GitHub Repositories to be used in conjunction with the ADO Pipeline, rather than just ADO repos
+### Changed
+- Token checks before trying PR status checks/comments for both ADO and GitHub
+- PR sub function to allow for github activities also
+- Logic around gathering git diff source/target branch details between ADO and GitHub
+### Fixed 
+- Logging issues around full branch scan vs delta PRs
+- Severity threshold vs max violation logic issues
+
 ## [1.2.2] - 2025-07-23
  
 ### Added

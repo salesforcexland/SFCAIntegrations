@@ -64,9 +64,11 @@ env:
 - With code analyzer v5, you can use a code-analyzer.yml configuration file (explained in detail [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html)) to control engines, tags, severities, and much more
 - This extension can leverage that custom configuration file in your scans for both PRs and full branch scans
 - In testing I've placed this file in a 'config' folder at the root of the repository, and referenced it as so in the parameter './config/code-analyzer.yml' to grab the file and copy it into the runner for use, so make sure it's accessible
+- See an example code analyzer file [here](/config/code-analyzer-full.yml)
 - Certain **caveats** are below:
   - You need to ensure the code-analyzer.yml file is present on all branches relevant for PR/full scans, or it'll get skipped
   - Consider starting with the example yml files i've provided HERE, with example log/rule overrides
+  - Ensure the `config_root:` property is left as `null` to allow dynamic passing of log outputs
   - There is currently a lack of support for extra config files (eslint, pmd etc) due to a relative path problem - this will be tackled in a future update
   - This could also contradict/cause confusion with the severity threshold and rule selector in terms of severities scanned and reported on
 
