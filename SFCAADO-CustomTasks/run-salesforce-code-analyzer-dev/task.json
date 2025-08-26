@@ -1,7 +1,7 @@
 {
-  "id": "5a1dfb21-3bcd-4ed7-9412-84e924b2e518",
-  "name": "run-salesforce-code-analyzer-dev",
-  "friendlyName": "Salesforce Code Analyzer-ADO Scan-D",
+  "id": "5a1dfb21-3bcd-4ed7-9412-84e924b2e517",
+  "name": "run-salesforce-code-analyzer",
+  "friendlyName": "Salesforce Code Analyzer-ADO Scan",
   "description": "Runs Salesforce Code Analyzer v5 against PRs or full branches and enforces violation thresholds.",
   "author": "Sam Crossland",
   "helpMarkDown": "Can run on PRs and find the changed files, or full branches, checking for code quality violations.",
@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 3,
-    "Patch": 34
+    "Patch": 0
   },
   "inputs": [
     {
