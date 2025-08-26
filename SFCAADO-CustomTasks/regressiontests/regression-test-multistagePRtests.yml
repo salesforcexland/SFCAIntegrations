@@ -1,0 +1,58 @@
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+schedules:
+  - cron: "45 20 * * *" # Modify this accordingly to run on the right schedule
+    displayName: "Daily 21:45 BST run"
+    branches:
+      include:
+        - feature/SFCA-Custom-Task-Testing-v2 # Change this to be the full branch you want to scan, e.g 'main' or 'staging'
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: SFCAPRRun1_Severity
+    displayName: "SFCAPRRun1_Severity"
+    jobs:
+    - job: SFCAPRRun1_Severity
+      steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - task: run-salesforce-code-analyzer-dev@1
+        displayName: SFCAPRRun1_Severity
+        condition: eq(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          stopOnViolations: true
+          useSeverityThreshold: true
+          severityThreshold: '3'
+          extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+          postStatusCheckToPR: false
+          postCommentsToPR: false
+          configFilePath: './config/code-analyzer-full.yml'
+          ruleSelector: 'Recommended'
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+  - stage: SFCAPRRun2_MaxViolations
+    displayName: "SFCAPRRun2_MaxViolations"
+    condition: failed()
+    jobs:
+    - job: SFCAPRRun2_MaxViolations
+      steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - task: run-salesforce-code-analyzer-dev@1
+        displayName: SFCAPRRun2_MaxViolations
+        inputs:
+          stopOnViolations: true
+          maximumViolations: 15
+          extensionsToScan: "cls|trigger"
+          postStatusCheckToPR: true
+          postCommentsToPR: false
+          ruleSelector: 'pmd'
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)

@@ -12,8 +12,8 @@
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
-    "Minor": 2,
-    "Patch": 15
+    "Minor": 3,
+    "Patch": 34
   },
   "inputs": [
     {
@@ -63,6 +63,22 @@
       "required": false,
       "visibleRule": "useSeverityThreshold = false",
       "helpMarkDown": "Fail the build if total violations exceed this number (irrespective of severity)."
+    },
+    {
+      "name": "configFilePath",
+      "type": "string",
+      "label": "Code Analyzer configuration filepath",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Optional absolute path to a custom Salesforce Code Analyzer configuration file (e.g ./config/code-analyzer.yml) - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
+    },
+    {
+      "name": "ruleSelector",
+      "type": "string",
+      "label": "Rule selector arguments (e.g Recommended, eslint, pmd, etc)",
+      "defaultValue": "Recommended",
+      "required": false,
+      "helpMarkDown": "Optional '--rule-selector' arguments, which defaults to Recommended (a tag across multiple engines), but can be customised as per here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze.html#run-the-rules-on-your-code-base'"
     },
     {
       "name": "postStatusCheckToPR",
