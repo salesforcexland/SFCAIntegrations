@@ -38,7 +38,7 @@ if (Test-Path $JSONOutputFilePath) {
         Write-Host "Violations '$env:totalViolations' found do not exceed the severity specified build allow to pass."
     }
     # If we're not using severity threshold, and the total violations found exceeds the maximum violations (defaulted to 10), we fail
-    elseif (($env:USE_SEVERITY_THRESHOLD -eq "false") -and $env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS) {
+    elseif (($env:USE_SEVERITY_THRESHOLD -eq "false") -and ([int]$env:totalViolations -gt [int]$env:MAXIMUM_VIOLATIONS)) {
         Write-Host "Too many violations '$env:totalViolations' found — above the maximum violation threshold of '$env:MAXIMUM_VIOLATIONS'"
         $env:VIOLATIONS_EXCEEDED = "true"
         Write-Warning "Set VIOLATIONS_EXCEEDED to 'true' and passing back to orchestrator to determine exit state"

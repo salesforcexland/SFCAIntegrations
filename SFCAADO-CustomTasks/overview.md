@@ -18,12 +18,12 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 
 ## Requirements
 
-- Currently this extension works for Azure and GitHub Repositories (detail [here](#github-support)), linking into Azure Pipelines as the runner (needs an available agent)
+- Currently this extension works for Azure and GitHub Repositories (detail in 'GitHub support'), linking into Azure Pipelines as the runner (needs an available agent)
 - Pipeline must run on `ubuntu-latest`
 - Node.js 20+ and Python 3.10+ must be available (these are already baked into ubuntu-latest, but you can explicitly check via `UseNode@1` and `UsePythonVersion@0` if necessary)
 - `checkout` step must override `fetchDepth` to 0 (no shallow fetching) for proper git diffing (if running on PRs)
 - PR build validation policies must be set up to control trigger behavior for ADO repos, or the 'pr' property for GitHub repos
-- See [here](#-required-permissions) for permission detail
+- See 'required permissions' for permission detail
 
 ## 🖥️ GitHub support
 - You can also use a GitHub repository for the code, and ADO pipelines as the orchestration engine to run the scan and store the results
@@ -35,7 +35,7 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 env:
       GITHUB_TOKEN: $(GITHUB_TOKEN)
 ```
-- See [screenshots](#️-screenshots) for more info
+- See screenshots for more info
 
 ## Usage
 
@@ -55,8 +55,8 @@ env:
 | `useSeverityThreshold` | No            | Boolean  | Use severity-based failure instead of total violation count |
 | `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
-| `configFilePath`       | No            | String   | Optional file path to the code-analyzer.yml file - further detail [here](#️-code-analyzeryml) |
-| `ruleSelector`         | No            | String   | Optional string for custom tag/engine selections (default is 'Recommended') - further detail [here](#-rule-selector) |
+| `configFilePath`       | No            | String   | Optional file path to the code-analyzer.yml file - further detail below |
+| `ruleSelector`         | No            | String   | Optional string for custom tag/engine selections (default is 'Recommended') - further detail below |
 | `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (ADO REPOS ONLY) (default: `false`) |
 | `postCommentsToPR`  | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
 | `scanFullBranch`  | No            | Boolean  | Whether we want to run code analyzer against an entire branch rather than PR deltas (default: `false`) |
