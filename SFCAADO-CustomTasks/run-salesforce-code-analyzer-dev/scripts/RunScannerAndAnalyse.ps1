@@ -51,7 +51,7 @@ if ($env:SCAN_FULL_BRANCH -eq "true") {
     $workspacePath = "$env:BUILD_SOURCESDIRECTORY"
 } else {
     # Delta scanning logic sets a file list or narrower path.
-    Write-Host "Full branch scan requested - passing the copied files in '$env:BUILD_STAGINGDIRECTORY/**' into the --workspace param"
+    Write-Host "Delta PR scan requested - passing the copied files in '$env:BUILD_STAGINGDIRECTORY/**' into the --workspace param"
     $workspacePath = "$env:BUILD_STAGINGDIRECTORY/**"
 }
 $HTMLOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"

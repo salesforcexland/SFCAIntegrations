@@ -9,7 +9,7 @@ This extension allows you to run Salesforce Code Analyzer v5 on the changed file
 - Scans an entire selected branch (as a one-off or scheduled run using cron) if desired
 - Can also scan only changed files in PRs (delta scanning), using dynamic engine selection of the code-analyzer package
 - Outputs results as artifacts (html report, json file, and each changed file) for investigation
-- Optional PR status check POST onto the PR for extra visibility
+- Optional PR status check/comments POST onto the PR for extra visibility
 
 ![Scan Example](images/pipelinerun.png)
 
