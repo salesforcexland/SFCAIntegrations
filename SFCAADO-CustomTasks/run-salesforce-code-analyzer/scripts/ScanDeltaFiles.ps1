@@ -1,16 +1,34 @@
 Write-Host "Checking whether we're in a PR or not, and proceeding to find delta files for scanning"
 $targetfolder = "$env:BUILD_STAGINGDIRECTORY/"
-
-# Currently only runs on PRs as it depends on the delta to scan and generate the report, rather than a full branch worth of files
 $BUILD_REASON = $env:BUILD_REASON
+$REPO_PROVIDER = $env:BUILD_REPOSITORY_PROVIDER
 Write-Host "Build reason is - '$BUILD_REASON'"
+Write-Host "Repository provider is - '$REPO_PROVIDER'"
 
 if ($BUILD_REASON -match 'PullRequest') {
-    $SOURCE_BRANCH_NAME = $env:SYSTEM_PULLREQUEST_SOURCEBRANCH -replace '^refs/heads/', 'origin/'
-    $TARGET_BRANCH_NAME = "origin/$($env:SYSTEM_PULLREQUEST_TARGETBRANCHNAME)"
-    Write-Host "Triggered by PullRequest - Source: $SOURCE_BRANCH_NAME, Target: $TARGET_BRANCH_NAME"
+    if ($REPO_PROVIDER -eq "GitHub") {
+        # GitHub Repos
+        $SOURCE_BRANCH_NAME = $env:SYSTEM_PULLREQUEST_SOURCEBRANCH -replace '^refs/heads/', ''
+        $TARGET_BRANCH_NAME = $env:SYSTEM_PULLREQUEST_TARGETBRANCH -replace '^refs/heads/', ''
 
-    $changes = git diff --name-only --relative --diff-filter=AMCR "$TARGET_BRANCH_NAME...$SOURCE_BRANCH_NAME"
+        Write-Host "GitHub PR - Source: $SOURCE_BRANCH_NAME, Target: $TARGET_BRANCH_NAME - explicitly fetching"
+        # Fetch branches explicitly due to the way GitHub doesn't auto retrieve the target branch details we need for diffing
+        
+        git fetch origin +refs/heads/${SOURCE_BRANCH_NAME}:refs/remotes/origin/${SOURCE_BRANCH_NAME}
+        git fetch origin +refs/heads/${TARGET_BRANCH_NAME}:refs/remotes/origin/${TARGET_BRANCH_NAME}
+        #git branch -a # Only for debugging
+        $TARGET_BRANCH = "refs/remotes/origin/$TARGET_BRANCH_NAME"
+        $SOURCE_BRANCH = "refs/remotes/origin/$SOURCE_BRANCH_NAME"
+    } else {
+        # Azure Repos
+        $SOURCE_BRANCH = $env:SYSTEM_PULLREQUEST_SOURCEBRANCH -replace '^refs/heads/', 'origin/'
+        $TARGET_BRANCH = "origin/$($env:SYSTEM_PULLREQUEST_TARGETBRANCHNAME)"
+        
+        Write-Host "Azure Repos PR - Source: $SOURCE_BRANCH, Target: $TARGET_BRANCH"
+    }
+    # Single git diff regardless of repo type, using the right ref or branch name
+    Write-Host "Running git diff between '$TARGET_BRANCH' and '$SOURCE_BRANCH' on provider '$REPO_PROVIDER'"
+    $changes = git diff --name-only --relative --diff-filter=AMCR "$TARGET_BRANCH...$SOURCE_BRANCH"
     Write-Host "Changes:`n$changes"
 
     $pattern = "\.($env:EXTENSIONS_TO_SCAN)$"
@@ -32,7 +50,7 @@ if ($BUILD_REASON -match 'PullRequest') {
             New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
             Copy-Item $file $target -Force
         }
-    
+
         Write-Host "Uploading scanned delta files as pipeline artifact..."
         Write-Host "##vso[artifact.upload artifactname=scanned-delta-files]$env:BUILD_STAGINGDIRECTORY"
     } else {

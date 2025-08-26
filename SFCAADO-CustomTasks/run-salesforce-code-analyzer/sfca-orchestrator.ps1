@@ -31,6 +31,14 @@ $SCAN_FULL_BRANCH = $env:INPUT_SCANFULLBRANCH
 Write-Host "Set SCAN_FULL_BRANCH to: $SCAN_FULL_BRANCH"
 $env:SCAN_FULL_BRANCH = $SCAN_FULL_BRANCH
 
+$CONFIG_FILE_PATH = $env:INPUT_CONFIGFILEPATH
+Write-Host "Set CONFIG_FILE_PATH to: $CONFIG_FILE_PATH"
+$env:CONFIG_FILE_PATH = $CONFIG_FILE_PATh
+
+$RULE_SELECTOR = $env:INPUT_RULESELECTOR
+Write-Host "Set RULE_SELECTOR to: $RULE_SELECTOR"
+$env:RULE_SELECTOR = $RULE_SELECTOR
+
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
     # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
@@ -80,11 +88,15 @@ function Write-TaskResult {
 # Considering the different routes a user could take via parameters, only check these if anything legitimate has happened
 if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
-    if ($USE_SEVERITY_THRESHOLD -eq "true" -and ([int]$env:thresholdViolations -gt 0) -and $STOP_ON_VIOLATIONS -eq "true") {
+    if ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
         $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
-    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
+    elseif ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
+        $warningMessage = "⚠️ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
+    }
+    elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") { # These next 2 must be using max violations instead of severity
         $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
