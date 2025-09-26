@@ -116,3 +116,12 @@ if ($POST_COMMENTS_TO_PR -eq "true") {
         Write-Warning "Failed to post PR comment for '$REPO_PROVIDER': $_"
     }
 }
+
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
+$POST_INLINE_COMMENTS = 'true'
+if($POST_INLINE_COMMENTS -eq 'true') {
+    if (Test-Path $JSONOutputFilePath) {
+        # Load the JSON and grab total violations
+        $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+    }
+}

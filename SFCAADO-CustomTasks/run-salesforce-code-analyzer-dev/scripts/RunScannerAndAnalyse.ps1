@@ -59,8 +59,19 @@ $JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 
 Write-Host "Running scan on workspace: $workspacePath"
 # Output both HTML and JSON for usage later
-# TODO: if running a full branch scan, we could pass in a Graph Engine flag in future to override and run '--rule-selector sfge'
-$scanArgs = @("--rule-selector", $env:RULE_SELECTOR, "--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
+$scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
+# Handle multiple rule selectors if presented (they'll be comma separated so we split on that into N args to parse)
+if ($env:RULE_SELECTOR) {
+    Write-Host "Rule selectors passed in are: '$env:RULE_SELECTOR'"
+    $selectors = $env:RULE_SELECTOR -split ","
+    foreach ($selector in $selectors) {
+        $trimmedSelector = $selector.Trim() # In case of rogue whitespacing inbetween the delimeters
+        if ($trimmedSelector) {
+            $scanArgs += @("--rule-selector", $trimmedSelector)
+            Write-Host "Adding in --rule-selector '$trimmedSelector' to the args"
+        }
+    }
+}
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)
 }

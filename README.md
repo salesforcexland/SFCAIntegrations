@@ -78,6 +78,7 @@ env:
 - You can also customise which engines/rules/tags you want to run (explained in detail [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze.html#run-the-rules-on-your-code-base)) as part of the runner
 - This extension defaults to the 'Recommended' tag across multiple engines, and the scanner dynamically determines which engines need to run based on this
 - You can customise this to run particular engines (e.g pmd, eslint), particular tags (e.g Recommended, Security), a combination of engine/tag (e.g pmd:BestPractices), or include severity also (e.g cpd:Design:5)
+  - A great example is preparing for AppExchange security reviews detailed [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/appexchange.html) where you can pass in 'AppExchange' for the first run, and 'Recommended:Security' for the second, to gather 2 HTML reports with the relevant violations
 - Certain **caveats** are below:
   - If you use the code-analyzer.yml file and severity threshold parameters, there may be discrepancies between the severities reported
   - If you select a particular tag, it could trigger unexpected engines if they're not disabled (e.g 'Apex' would trigger the 'sfge' graph engine)
