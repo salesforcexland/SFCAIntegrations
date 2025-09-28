@@ -117,11 +117,54 @@ if ($POST_COMMENTS_TO_PR -eq "true") {
     }
 }
 
-$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/results/SFCAv5Results.json"
 $POST_INLINE_COMMENTS = 'true'
 if($POST_INLINE_COMMENTS -eq 'true') {
+    Write-Host "Looking to leave inline comments on the PR for the relevant violations"
     if (Test-Path $JSONOutputFilePath) {
         # Load the JSON and grab total violations
         $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+        Write-Host "Grabbed the content from the JSON file for violation/location"
     }
+
+    Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
+    #$repoRoot = $env:BUILD_SOURCESDIRECTORY  # usually the root of the repo
+    foreach ($violation in ($SFCAResultJSON.violations | Select-Object -First 3)) { # TODO: Only grabbing the first 3 for testing
+        
+        $msg = "$($violation.rule): $($violation.message)"
+        $filePath = $violation.locations[0].file
+        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", "" # Replace the '/home/vsts/work/1/a/' full paths
+        # TODO: Improve the logic above so we're not having to use filthy regex...
+        $line    = $violation.locations[0].startLine
+        Write-Host "File path changed from '$filePath' to '$relativePath', msg is '$msg' and line is '$line'"
+
+        $commentBody = @{
+            comments = @(@{
+                content = $msg
+                commentType = "text"
+            })
+            status = "active"
+            threadContext = @{
+                filePath = $relativePath
+                rightFileStart = @{ line = $line; offset = 0 }
+                rightFileEnd   = @{ line = $line; offset = 0 }
+            }
+        } | ConvertTo-Json -Depth 5
+
+        Write-Host "Proposed comment body is: '$commentBody'"
+        # POST comment to the right line
+        try {
+            Write-Host "Posting comment to $REPO_PROVIDER PR at URL: $commentURI"
+            $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
+
+            if ($REPO_PROVIDER -eq "TfsGit") {
+                Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
+            }
+        } catch {
+            Write-Error "Failed to post PR comment for '$REPO_PROVIDER': $_"
+            exit 1
+        }
+    }
+    
+    
 }
