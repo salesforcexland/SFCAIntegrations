@@ -39,6 +39,10 @@ $RULE_SELECTOR = $env:INPUT_RULESELECTOR
 Write-Host "Set RULE_SELECTOR to: $RULE_SELECTOR"
 $env:RULE_SELECTOR = $RULE_SELECTOR
 
+$OUTPUT_FILE_TYPES = $env:INPUT_OUTPUTFILETYPES
+Write-Host "Set OUTPUT_FILE_TYPES to: $OUTPUT_FILE_TYPES"
+$env:OUTPUT_FILE_TYPES = $OUTPUT_FILE_TYPES
+
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
     # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)

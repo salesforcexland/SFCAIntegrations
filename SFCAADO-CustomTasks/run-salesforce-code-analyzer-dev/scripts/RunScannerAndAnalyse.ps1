@@ -54,16 +54,14 @@ if ($env:SCAN_FULL_BRANCH -eq "true") {
     Write-Host "Delta PR scan requested - passing the copied files in '$env:BUILD_STAGINGDIRECTORY/**' into the --workspace param"
     $workspacePath = "$env:BUILD_STAGINGDIRECTORY/**"
 }
-$HTMLOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.html"
-$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
 
-Write-Host "Running scan on workspace: $workspacePath"
-# Output both HTML and JSON for usage later
-$scanArgs = @("--workspace", $workspacePath, "--output-file", $HTMLOutputFilePath, "--output-file", $JSONOutputFilePath)
+Write-Host "Running scan on workspace: '$workspacePath' - preparing the rest of the scan arguments"
+# Scaffold the workspace first, and add in the extra parameters as we need to for engines, severity threshold, outputs etc
+$scanArgs = @("--workspace", $workspacePath)
 # Handle multiple rule selectors if presented (they'll be comma separated so we split on that into N args to parse)
 if ($env:RULE_SELECTOR) {
-    Write-Host "Rule selectors passed in are: '$env:RULE_SELECTOR'"
-    $selectors = $env:RULE_SELECTOR -split ","
+    Write-Host "Rule selectors passed in are: '$env:RULE_SELECTOR' - splitting on any comma delimeter for multiple engines to frame the scanner call correctly"
+    $selectors = $env:RULE_SELECTOR -split "," # Split on commas if there's more than 1 provided
     foreach ($selector in $selectors) {
         $trimmedSelector = $selector.Trim() # In case of rogue whitespacing inbetween the delimeters
         if ($trimmedSelector) {
@@ -80,6 +78,50 @@ if($ConfigFileValid) {
     $scanArgs += @("--config-file", $CodeAnalyzerYmlFilePath)
 }
 
+# Always-required outputs - html comes in as default from the task.json, so exclude this, but json is needed for violation analysis
+$requiredFormats = @("json")
+# Valid formats map (normalize aliases -> canonical extension, ignoring htm and sarif.json)
+$validFormats = @{
+    "csv"        = "csv"
+    "html"       = "html"
+    "htm"        = "html"
+    "json"       = "json"
+    "sarif"      = "sarif"
+    "sarif.json" = "sarif"
+    "xml"        = "xml"
+}
+# Start with the defaults, since we need json for accurate rule assessments, and html is the most human-readable output with flexible filtering built-in
+$formats = @($requiredFormats)
+
+# Add user-specified formats (comma separated)
+if ($env:OUTPUT_FILE_TYPES) { 
+    Write-Host "Additional output formats requested: '$env:OUTPUT_FILE_TYPES'"
+    $extraFormats = $env:OUTPUT_FILE_TYPES -split "," # Split on commas if there's more than 1 provided
+    foreach ($format in $extraFormats) {
+        $trimmedFormat = $format.Trim().ToLower()
+        if ($validFormats.ContainsKey($trimmedFormat)) {
+            $formats += $validFormats[$trimmedFormat]
+        } else {
+            Write-Warning "Unsupported output format '$trimmedFormat' ignored. Supported: csv, html, json, sarif, xml"
+        }
+    }
+}
+
+# Deduplicate (case-insensitive) - make sure we're not passing multiple of the same output type
+$formats = $formats | Sort-Object -Unique
+
+# Stage and create a results folder to house the 1 or more output types in
+$resultsFolder = Join-Path $env:BUILD_STAGINGDIRECTORY "results"
+# Ensure folder is created before the output files can save there or else the runner will fail
+New-Item -ItemType Directory -Force -Path $resultsFolder | Out-Null
+
+# Generate output files to pass to the scanner
+foreach ($format in $formats) {
+    $outPath = Join-Path $resultsFolder "SFCAv5Results.$format"
+    $scanArgs += @("--output-file", $outPath)
+    Write-Host "Adding output format '$format' -> $outPath"
+}
+
 Write-Host "Scan args to pass to 'sf code-analyzer run' are: '$scanArgs'"
 # Run and capture both std outputs/errors and exit code - using Out-String and trim to ensure multi line clean logging in the ADO console
 $scanOutput = (& sf code-analyzer run @scanArgs 2>&1 | Out-String).Trim()
@@ -88,15 +130,15 @@ $env:SFScanExitCode = $LASTEXITCODE
 Write-Host "Exit code from scanner: '$env:SFScanExitCode'"
 Write-Host "Raw scanner output:`n$scanOutput"
 
-# Find the total number of violations from the json file
-if (Test-Path $JSONOutputFilePath) {
+# Find the total number of violations from the json file (in the results folder)
+if (Test-Path (Join-Path $resultsFolder "SFCAv5Results.json")) {
     Write-Host "Calling sub function ('CheckViolations.ps1') to assess violations from the JSON"
     . "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)/CheckViolations.ps1"
 }
 elseif ($scanOutput -match 'Found\s+(\d+)\s+violation') {
     # Backup for total violations
     $totalViolations = [int]$matches[1]
-    Write-Host "Total violations detected from scan output: $totalViolations"
+    Write-Warning "Couldn't find the json file - total violations detected from raw scan output: '$totalViolations'"
     $env:totalViolations = $totalViolations
 } 
 else {
@@ -105,9 +147,9 @@ else {
 }
 
 # 6. Publish the results as a pipeline artifact
-Write-Host "Scan complete. Uploading HTML and JSON outputs to 'salesforce-code-analyzer-results' in published artefacts"
-Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$HTMLOutputFilePath"
-Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$JSONOutputFilePath"
+Write-Host "Scan complete. Uploading all scanner output files to 'salesforce-code-analyzer-results' in published artefacts"
+# Upload 1 output folder of files since there could be 1 or multiple
+Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$resultsFolder"
 if($ConfigFileValid) {
     Write-Host "Valid config file found and used - uploading config folder to 'salesforce-code-analyzer-config' in published artefacts"
     Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-config]$configFolder"
