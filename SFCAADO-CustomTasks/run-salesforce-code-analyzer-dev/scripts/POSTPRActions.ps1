@@ -119,6 +119,7 @@ if ($POST_COMMENTS_TO_PR -eq "true") {
 
 $JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/results/SFCAv5Results.json"
 $POST_INLINE_COMMENTS = 'true'
+# TODO: NEED TO ONLY COMMENT ON THE CHANGED LINES IN THE PR, NOT LINES ELSEWHERE IN THE FILE - use the PR hunks for changed lines vs existing lines we can't comment on
 if($POST_INLINE_COMMENTS -eq 'true') {
     Write-Host "Looking to leave inline comments on the PR for the relevant violations"
     if (Test-Path $JSONOutputFilePath) {
@@ -127,44 +128,59 @@ if($POST_INLINE_COMMENTS -eq 'true') {
         Write-Host "Grabbed the content from the JSON file for violation/location"
     }
 
+    $changedLinesJson = $env:CHANGED_LINES_PER_FILE
+    $changedLinesPerFile = $changedLinesJson | ConvertFrom-Json
+    Write-Host "Grabbed the content from the JSON variable for changed lines per file found in ScanDeltaFiles.ps1 - parsing and checking vs violations found"
+
     Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
-    #$repoRoot = $env:BUILD_SOURCESDIRECTORY  # usually the root of the repo
-    foreach ($violation in ($SFCAResultJSON.violations | Select-Object -First 3)) { # TODO: Only grabbing the first 3 for testing
+    # Initialize counters
+    $violationsInPR = 0
+    $violationsOutsidePR = 0
+    foreach ($violation in ($SFCAResultJSON.violations)) { 
         
         $msg = "$($violation.rule): $($violation.message)"
         $filePath = $violation.locations[0].file
-        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", "" # Replace the '/home/vsts/work/1/a/' full paths
+        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]", "" # Replace the '/home/vsts/work/1/a/' full paths
         # TODO: Improve the logic above so we're not having to use filthy regex...
         $line    = $violation.locations[0].startLine
         Write-Host "File path changed from '$filePath' to '$relativePath', msg is '$msg' and line is '$line'"
+        # ✅ Check if this line is part of the PR diff
+        if (($changedLinesPerFile.PSObject.Properties.Name -contains $relativePath) -and ($changedLinesPerFile.$relativePath -contains $line)) {
+            Write-Host "💬 $relativePath`: $line is in diff — eligible for inline comment"
+            $violationsInPR++
+            # 🧩 Build inline comment body
+            $commentBody = @{
+                comments = @(@{
+                    content = $msg
+                    commentType = "text"
+                })
+                status = "active"
+                threadContext = @{
+                    filePath = $relativePath
+                    rightFileStart = @{ line = $line; offset = 1 }
+                    rightFileEnd   = @{ line = $line; offset = 1 }
+                }
+            } | ConvertTo-Json -Depth 5
 
-        $commentBody = @{
-            comments = @(@{
-                content = $msg
-                commentType = "text"
-            })
-            status = "active"
-            threadContext = @{
-                filePath = $relativePath
-                rightFileStart = @{ line = $line; offset = 0 }
-                rightFileEnd   = @{ line = $line; offset = 0 }
+            Write-Host "Proposed comment body is: '$commentBody'"
+            # POST comment to the right line
+            try {
+                Write-Host "Posting comment to $REPO_PROVIDER PR at URL: $commentURI"
+                $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
+
+                if ($REPO_PROVIDER -eq "TfsGit") {
+                    Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
+                }
+            } catch {
+                Write-Error "Failed to post PR comment for '$REPO_PROVIDER': $_"
+                exit 1
             }
-        } | ConvertTo-Json -Depth 5
-
-        Write-Host "Proposed comment body is: '$commentBody'"
-        # POST comment to the right line
-        try {
-            Write-Host "Posting comment to $REPO_PROVIDER PR at URL: $commentURI"
-            $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
-
-            if ($REPO_PROVIDER -eq "TfsGit") {
-                Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
-            }
-        } catch {
-            Write-Error "Failed to post PR comment for '$REPO_PROVIDER': $_"
-            exit 1
+        }
+        else {
+            Write-Host "📝 $relativePath`: $line not in diff — skipping inline comment"
+            $violationsOutsidePR++
         }
     }
-    
-    
+    Write-Host "✅ Violations in PR lines (new issues): '$violationsInPR'"
+    Write-Host "⚠️ Violations outside PR lines (tech debt / existing code): '$violationsOutsidePR'"
 }
