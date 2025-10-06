@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.4.0] - 2025-10-XX
+
+### Added
+- Added the capability for inline comments of rule violations across a PR, along with a more detailed summary comment for new issues vs technical debt
+- Allowed multiple engines/tags to be passed in to the scanner
+- Allowed multiple output file types to be passed in to the scanner
+### Changed
+- Updated the existing summary comment to use markdown instead
+### Fixed 
+- 
+
 ## [1.3.0] - 2025-08-26
  
 ### Added

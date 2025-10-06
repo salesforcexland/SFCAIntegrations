@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 4,
-    "Patch": 18
+    "Patch": 23
   },
   "inputs": [
     {
@@ -99,10 +99,18 @@
     {
       "name": "postCommentsToPR",
       "type": "boolean",
-      "label": "Post comments to PR (true/false)",
+      "label": "Post summary comment to PR (true/false)",
       "defaultValue": "false",
       "required": false,
-      "helpMarkDown": "Boolean to dictate whether we POST comments to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+      "helpMarkDown": "Boolean to dictate whether we POST a summary comment to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    },
+    {
+      "name": "postInlineCommentsToPR",
+      "type": "boolean",
+      "label": "Post inline comments to PR (true/false)",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we POST inline comments to the PR for specific violations. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
     },
     {
       "name": "scanFullBranch",

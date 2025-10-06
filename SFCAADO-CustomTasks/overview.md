@@ -81,6 +81,7 @@ env:
 - Certain **caveats** are below:
   - If you use the code-analyzer.yml file and severity threshold parameters, there may be discrepancies between the severities reported
   - If you select a particular tag, it could trigger unexpected engines if they're not disabled (e.g 'Apex' would trigger the 'sfge' graph engine)
+    - 'sfge' is the Graph Engine (currently in Developer Preview) which uses data flow analysis across the wider codebase, causing much longer runtimes, so should only really be used in full branch scans. More info [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
   - If you pass in an incorrect value here, it won't cause the scanner to fail, and may just run with 0 rules (verify this in the logs)
 
 ---
