@@ -135,8 +135,9 @@ if($env:INPUT_POSTINLINECOMMENTSTOPR -eq 'true') {
             $violationsOutsidePR++
         }
         # Put a synthetic limit here so we're not overloading the PR
+        # TODO: Expose this as a param? change to 20/30 by default?
         if ($commentCounter -ge 50) {
-            Write-Warning "Reached 50 comments — stopping further inline posts - see the full html/json report for all issues."
+            Write-Warning "Reached 50 comments — stopping further inline POSTs - see the full html/json report for all issues."
             break
         }
     }

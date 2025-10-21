@@ -49,7 +49,6 @@ $env:OUTPUT_FILE_TYPES = $OUTPUT_FILE_TYPES
 
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
-    # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
     Write-Host "Scan full branch requested — skipping ScanDeltaFiles and running full scan on the branch '$env:BUILD_SOURCEBRANCH'."
     . "$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1"
 }
