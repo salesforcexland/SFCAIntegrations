@@ -96,23 +96,23 @@ function Write-TaskResult {
 if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
     if ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
-        $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
+        $failMessage = "❌ '$env:thresholdViolations' violations found (across all lines in the PR changed files) exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        $warningMessage = "⚠️ '$env:thresholdViolations' violations found (across all lines in the PR changed files) exceeding the severity threshold of '$SEVERITY_THRESHOLD', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
         Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") { # These next 2 must be using max violations instead of severity
-        $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found and STOP_ON_VIOLATIONS = true — failing the build."
+        $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found (across all lines in the PR changed files) and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ Violations '$env:totalViolations' exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        $warningMessage = "⚠️ Violations '$env:totalViolations' (across all lines in the PR changed files) exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
         Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     else {
-        $passMessage = "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+        $passMessage = "✅ Build passed: violations found '$env:totalViolations' (across all lines in the PR changed files) are either within the severity threshold, or less than the maximum allowed. Passed."
         Write-TaskResult -Message $passMessage -Result 'Succeeded'
     }
 }

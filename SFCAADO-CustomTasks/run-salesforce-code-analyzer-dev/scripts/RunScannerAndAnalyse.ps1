@@ -58,17 +58,13 @@ if ($env:SCAN_FULL_BRANCH -eq "true") {
 Write-Host "Running scan on workspace: '$workspacePath' - preparing the rest of the scan arguments"
 # Scaffold the workspace first, and add in the extra parameters as we need to for engines, severity threshold, outputs etc
 $scanArgs = @("--workspace", $workspacePath)
-# Handle multiple rule selectors if presented (they'll be comma separated so we split on that into N args to parse)
+# Handle multiple rule selectors - as of v5.6.1, these can be passed in with brackets and colons as delimeters, so handle those
 if ($env:RULE_SELECTOR) {
-    Write-Host "Rule selectors passed in are: '$env:RULE_SELECTOR' - splitting on any comma delimeter for multiple engines to frame the scanner call correctly"
-    $selectors = $env:RULE_SELECTOR -split "," # Split on commas if there's more than 1 provided
-    foreach ($selector in $selectors) {
-        $trimmedSelector = $selector.Trim() # In case of rogue whitespacing inbetween the delimeters
-        if ($trimmedSelector) {
-            $scanArgs += @("--rule-selector", $trimmedSelector)
-            Write-Host "Adding in --rule-selector '$trimmedSelector' to the args"
-        }
-    }
+    Write-Host "Rule selectors passed in are: '$env:RULE_SELECTOR' - any brackets/colons for multiple engines/tags are already handled in the scanner call later"
+    $rawSelector = $env:RULE_SELECTOR
+
+    $scanArgs += @("--rule-selector", $rawSelector)
+    Write-Host "Adding in --rule-selector '$rawSelector' to the args"
 }
 if ($env:USE_SEVERITY_THRESHOLD -eq "true" -and $env:SEVERITY_THRESHOLD) {
     $scanArgs += @("--severity-threshold", $env:SEVERITY_THRESHOLD)

@@ -60,10 +60,10 @@ if ($BUILD_REASON -match 'PullRequest') {
     Write-Host "🔍 Running simple per-file diff check..."
     $changedLinesPerFile = @{}
     foreach ($file in $RelevantFilesForScanning) {
-        Write-Host "`n📄 Checking file: $file"
+        #Write-Host "`n📄 Checking file: $file"
         $diffOutput = git diff --unified=0 "$TARGET_BRANCH...$SOURCE_BRANCH" -- $file
         $lines = @()
-        Write-Host "Grabbed diff output of '$diffOutput'"
+        #Write-Host "Grabbed diff output of '$diffOutput'"
         foreach ($line in $diffOutput -split "`n") {
             if ($line -match '^@@ .*\+(\d+)(?:,(\d+))? @@') {
                 $start = [int]$matches[1]
@@ -77,10 +77,11 @@ if ($BUILD_REASON -match 'PullRequest') {
 
         if ($lines.Count -gt 0) {
             $changedLinesPerFile[$file] = $lines
-            Write-Host "✅ Changed lines: $($lines -join ', ')"
-        } else {
-            Write-Host "⚠️  No changed line hunks found in diff"
-        }
+            #Write-Host "✅ Changed lines: $($lines -join ', ')"
+        } 
+        #else {
+            #Write-Host "⚠️  No changed line hunks found in diff"
+        #}
     }
 
     Write-Host "`n📘 Summary of changed lines per file:"
