@@ -26,6 +26,7 @@ $headers = @{
   "Authorization" = "Bearer $accessToken"
 }
 
+Write-Host "---- PR Status check section ----"
 # POSTing status check to PR logic, with custom link to the pipeline information
 # NOTE - Only valid for ADO PRs - GitHub PRs already expose this by default so no extra POST required
 if ($POST_STATUS_CHECK_TO_PR -eq "true") {
@@ -61,10 +62,180 @@ if ($POST_STATUS_CHECK_TO_PR -eq "true") {
       }
     }
 }
+Write-Host "---- Metrics section ----"
+# Work out the distribution of new vs existing issues across the files involved in the PR, for inline commenting (if selected) and metrics
+function Get-ViolationDistribution {
+    param (
+        [string]$JSONOutputFilePath,
+        [string]$ChangedLinesJson
+    )
+
+    if (!(Test-Path $JSONOutputFilePath)) {
+        throw "JSON output file not found: $JSONOutputFilePath"
+    }
+
+    $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
+    $changedLinesPerFile = $ChangedLinesJson | ConvertFrom-Json
+
+    $violationsInPR = @()
+    $violationsOutsidePR = @()
+
+    foreach ($violation in $SFCAResultJSON.violations) {
+        $filePath = $violation.locations[0].file
+        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
+        $line = $violation.locations[0].startLine
+
+        if (($changedLinesPerFile.PSObject.Properties.Name -contains $relativePath) -and
+            ($changedLinesPerFile.$relativePath -contains $line)) {
+            $violationsInPR += $violation
+        } else {
+            $violationsOutsidePR += $violation
+        }
+    }
+
+    return @{
+        InPR = $violationsInPR
+        OutsidePR = $violationsOutsidePR
+    }
+}
+# We've already uploaded the published artefacts at this point, but keep using the build staging directory for now
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/results/SFCAv5Results.json"
+Write-Host "Evaluating violations vs PR diff..."
+$distribution = Get-ViolationDistribution -JSONOutputFilePath $JSONOutputFilePath -ChangedLinesJson $env:CHANGED_LINES_PER_FILE
+$violationsInPR = $distribution.InPR
+$violationsInPRCount = $violationsInPR.Count # May seem redundant, but used in a lot of places so better to grab it now
+$violationsOutsidePR = $distribution.OutsidePR
+$violationsOutsidePRCount = $violationsOutsidePR.Count
+Write-Host "Found '$violationsInPRCount' violations in PR lines, and '$violationsOutsidePRCount' outside those lines across the rest of the file/s."
+
+# Always calculate total debt, even if not posting inline
+$totalViolationsAcrossPRFiles = $violationsInPRCount + $violationsOutsidePRCount
+$percentPR = if ($totalViolationsAcrossPRFiles -gt 0) { [math]::Round(($violationsInPRCount / $totalViolationsAcrossPRFiles) * 100, 1) } else { 0 }
+$percentOutside = if ($totalViolationsAcrossPRFiles -gt 0) { [math]::Round(($violationsOutsidePRCount / $totalViolationsAcrossPRFiles) * 100, 1) } else { 0 }
+Write-Host "Found '$violationsInPRCount' potential new issues introduced in this PR."
+Write-Host "Detected '$violationsOutsidePRCount' existing issues in surrounding code (tech debt)."
+Write-Host "New issues represent '$percentPR%' of all violations identified"
+
+Write-Host "---- PR Commenting Section ----"
+# Set the base ADO comment URI up for use in inline comments and/or summary
+$commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/threads?api-version=7.1"
+Write-Host "Checking if we were passed in the flag to leave inline comments on the PR (ADO ONLY)"
+# Only for ADO for now
+if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")) { 
+    $MaximumPRComments = 20 # TODO: Magic number here - probably not expose as an inbound param due to limits/overloading, but be aware
+    Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - current max number of comments is '$MaximumPRComments'"
+    Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
+    $commentCounter = 0 # Count how many comments we POST, and use a hard limit to prevent overloading the PR
+    foreach ($violation in $violationsInPR) {
+        $msg = "$($violation.rule): $($violation.message)"
+        $filePath = $violation.locations[0].file
+        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
+        $line = $violation.locations[0].startLine
+
+        $messageContent = "⚠️ Engine: " + $violation.engine + " - Message: " + $msg
+        if ($null -ne $violation.resources) {
+            $messageContent += " - Relevant resource: $($violation.resources)"
+        }
+
+        $commentBody = @{
+            comments = @(@{
+                content = $messageContent
+                commentType = "text"
+            })
+            status = "active"
+            threadContext = @{
+                filePath = "/" + $relativePath
+                rightFileStart = @{ line = $line; offset = 1 }
+                rightFileEnd   = @{ line = $line; offset = 1 }
+            }
+        } | ConvertTo-Json -Depth 5
+
+        try {
+            Write-Host "Posting comment '$messageContent' to URL: '$commentURI'"
+            $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
+            $commentCounter++
+
+            if ($REPO_PROVIDER -eq "TfsGit") {
+                Write-Host "✅ Posted PR comment (Thread ID: $($response.id)) — $($violation.rule)"
+            }
+        } catch {
+            Write-Warning "Failed to post PR comment: $_"
+        }
+
+        if ($commentCounter -ge $MaximumPRComments) { #
+            $MaximumPRCommentsReached = $true # use this in the summary later
+            Write-Warning "Reached '$MaximumPRComments' comments — stopping further inline POSTs, and passing off to the report artefacts." 
+            break
+        }
+    }
+
+    Write-Host "✅ Violations in PR lines (new issues): '$($violationsInPR.Count)'"
+    Write-Host "⚠️ Violations outside PR lines (tech debt / existing code): '$($violationsOutsidePR.Count)'"
+}
 
 # Check if we're POSTing comments to the PR and which provider route we need to take
 if ($POST_COMMENTS_TO_PR -eq "true") {
-    $commentText = "Salesforce Code Analyzer - analysis completed with '$totalViolations' total violations (all severities). [Published artifacts]($publishedArtefactURL)"
+    Write-Host "Summary comment requested - scaffolding the right markdown text and appending relevant information"
+    # 🧠 Build Markdown summary comment baseline
+$commentText = @"
+## 📊 Salesforce Code Analysis Summary
+
+### Total violations (across all severities, for your chosen --rule-selector of '$env:RULE_SELECTOR'): $totalViolationsAcrossPRFiles
+"@
+
+    if ($totalViolationsAcrossPRFiles -gt 0) {
+        Write-Host "Violations are above 0, so we have the violations in and out of the PR to summarise"
+        # 🧠 Add in the tech debt breakdown - handling the picky indentation requirements
+        $commentText += @"
+
+## 🔎 New Issue vs Technical Debt Breakdown
+
+| Type of issue | Count | % of total |
+|------|--------|-------------|
+| **New issues (in PR changes)** | $violationsInPRCount | $percentPR% |
+| **Existing issues (tech debt)** | $violationsOutsidePRCount | $percentOutside% |
+
+---
+
+## 💡 Highlights
+- 🧹Detected **$violationsOutsidePRCount** existing issues in the surrounding code of the files modified (Technical Debt) - _NOTE: These issues would not be commented on in the PR_.
+"@
+        # Add in severity threshold reference if that was passed - #TODO: Add in an enum to nicely outline the wording for each threshold and not just the number
+        if ($env:USE_SEVERITY_THRESHOLD -eq "true") {
+            Write-Host "Use severity threshold was true, so adding in a section to highlight that and the blocking condition"
+            $commentText += @"
+
+- 🧩 **Chosen severity threshold:** '$env:SEVERITY_THRESHOLD'
+- 🚫 **Blocking condition:** The pipeline fails if any violations at or above threshold '**$env:SEVERITY_THRESHOLD**' are detected in the PR’s changed files and StopOnViolations is true.
+    - There were **$env:thresholdViolations** violations that exceeded this threshold, out of the **$totalViolationsAcrossPRFiles** detected
+"@
+        } # Use severity threshold is false, so we must be working on
+        else {
+        Write-Host "Use severity threshold is false, so adding in max violations note"
+            $commentText += @"
+
+- 🧩 **Maximum violations allowed:** '$env:MAXIMUM_VIOLATIONS'
+- 🚫 **Blocking condition:** The pipeline fails if the total violations are above '**$env:MAXIMUM_VIOLATIONS**' in the PR’s changed files and StopOnViolations is true.
+    - There were **$env:totalViolations** found in total
+"@
+        }
+        if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and $MaximumPRCommentsReached -eq $true) { # This is a mess of trues due to the awkward ADO env vars
+            Write-Host "Inline comments is true and we surpassed the threshold of '$MaximumPRComments' comments, so adding in a note"
+            $commentText += @"
+
+- 📝 **Inline comments** were turned on for this run and they will be listed below, but only up to a maximum count of '$MaximumPRComments', so see the artefacts for further specifics
+"@
+        }
+    }
+    # Add in the final report link
+    $commentText += @"
+
+---
+
+> 💡 _See the full report here - [Published artifacts]($publishedArtefactURL)._
+"@
+
+
     # Provider-specific config
     switch ($REPO_PROVIDER) {
         "TfsGit" {

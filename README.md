@@ -54,8 +54,10 @@ env:
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
 | `configFilePath`       | No            | String   | Optional file path to the code-analyzer.yml file - further detail [here](#️-code-analyzeryml) |
 | `ruleSelector`         | No            | String   | Optional string for custom tag/engine selections (default is 'Recommended') - further detail [here](#-rule-selector) |
+| `outputFileTypes`         | No            | String   | Optional output file types with comma delimeters (json is required and hardcoded internally). Options are: html, csv, sarif, and xml (default: `html`)|
 | `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (ADO REPOS ONLY) (default: `false`) |
 | `postCommentsToPR`     | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
+| `postInlineCommentsToPR`  | No            | Boolean  | Whether to POST inline comments throughout the PR for specific violations (ADO only, and Max 20) (default: `false`) |
 | `scanFullBranch`       | No            | Boolean  | Whether we want to run code analyzer against an entire branch rather than PR deltas (default: `false`) |
 
 ---
@@ -77,11 +79,20 @@ env:
 ## 📏 Rule selector
 - You can also customise which engines/rules/tags you want to run (explained in detail [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze.html#run-the-rules-on-your-code-base)) as part of the runner
 - This extension defaults to the 'Recommended' tag across multiple engines, and the scanner dynamically determines which engines need to run based on this
-- You can customise this to run particular engines (e.g pmd, eslint), particular tags (e.g Recommended, Security), a combination of engine/tag (e.g pmd:BestPractices), or include severity also (e.g cpd:Design:5)
+- You can customise this to run particular engines (e.g pmd, eslint), particular tags (e.g Recommended, Security), a combination of engine/tag (e.g pmd:BestPractices), or include severity also (e.g cpd:Design:5). As of SFCA v5.6.1, you can combine all of these into one value too, e.g "(pmd,retire-js):(Performance,Security)"
+  - A great example is preparing for AppExchange security reviews detailed [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/appexchange.html) where you can pass in 'AppExchange' for the first run, and 'Recommended:Security' for the second, to gather 2 HTML reports with the relevant violations
 - Certain **caveats** are below:
   - If you use the code-analyzer.yml file and severity threshold parameters, there may be discrepancies between the severities reported
   - If you select a particular tag, it could trigger unexpected engines if they're not disabled (e.g 'Apex' would trigger the 'sfge' graph engine)
+    - 'sfge' is the Graph Engine (currently in Developer Preview) which uses data flow analysis across the wider codebase, causing much longer runtimes, so should only really be used in full branch scans. More info [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
   - If you pass in an incorrect value here, it won't cause the scanner to fail, and may just run with 0 rules (verify this in the logs)
+
+---
+
+## 📏 Output file types
+- Optional output file types with comma delimeters (json is required and hardcoded to be outputted). Options are: html, csv, sarif, and xml
+- Further detail is [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/output-schemas-run.html)
+- Examples may be 'html, json, sarif', or 'csv'
 
 ---
 

@@ -56,6 +56,45 @@ if ($BUILD_REASON -match 'PullRequest') {
     } else {
         Write-Warning "No relevant files found. Skipping downstream steps."
     }
+
+    Write-Host "🔍 Running simple per-file diff check..."
+    $changedLinesPerFile = @{}
+    foreach ($file in $RelevantFilesForScanning) {
+        #Write-Host "`n📄 Checking file: $file"
+        $diffOutput = git diff --unified=0 "$TARGET_BRANCH...$SOURCE_BRANCH" -- $file
+        $lines = @()
+        #Write-Host "Grabbed diff output of '$diffOutput'"
+        foreach ($line in $diffOutput -split "`n") {
+            if ($line -match '^@@ .*\+(\d+)(?:,(\d+))? @@') {
+                $start = [int]$matches[1]
+                $count = if ($matches[2]) { [int]$matches[2] } else { 1 }
+
+                for ($i = $start; $i -lt ($start + $count); $i++) {
+                    $lines += $i
+                }
+            }
+        }
+
+        if ($lines.Count -gt 0) {
+            $changedLinesPerFile[$file] = $lines
+            #Write-Host "✅ Changed lines: $($lines -join ', ')"
+        } 
+        #else {
+            #Write-Host "⚠️  No changed line hunks found in diff"
+        #}
+    }
+
+    Write-Host "`n📘 Summary of changed lines per file:"
+    $changedLinesPerFile.GetEnumerator() | ForEach-Object {
+        Write-Host "  $($_.Key): $($_.Value -join ', ')"
+    }
+
+    # Convert to JSON and escape newlines for safe env var use
+    $changedLinesJson = ($changedLinesPerFile | ConvertTo-Json -Depth 5 -Compress)
+    # Store in environment variable (works within same job)
+    $env:CHANGED_LINES_PER_FILE = $changedLinesJson
+    Write-Host "##vso[task.setvariable variable=CHANGED_LINES_PER_FILE;issecret=false]$changedLinesJson"
+    Write-Host "✅ Stored changed line map in environment variable 'CHANGED_LINES_PER_FILE'"
 } else {
     Write-Warning "Not a PullRequest build. Skipping diff logic."
     $env:RELEVANT_FILES_FOUND = "false"

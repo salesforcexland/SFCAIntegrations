@@ -12,8 +12,8 @@
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
-    "Minor": 3,
-    "Patch": 34
+    "Minor": 4,
+    "Patch": 43
   },
   "inputs": [
     {
@@ -75,10 +75,18 @@
     {
       "name": "ruleSelector",
       "type": "string",
-      "label": "Rule selector arguments (e.g Recommended, eslint, pmd, etc)",
+      "label": "Rule selector argument (e.g Recommended, eslint, pmd, (pmd,retire-js):(Performance,Security) etc). Can include multiple engines/tags",
       "defaultValue": "Recommended",
       "required": false,
-      "helpMarkDown": "Optional '--rule-selector' arguments, which defaults to Recommended (a tag across multiple engines), but can be customised as per here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze.html#run-the-rules-on-your-code-base'"
+      "helpMarkDown": "1 '--rule-selector' argument, which defaults to Recommended (a tag across multiple engines), but can be customised as per here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze.html#run-the-rules-on-your-code-base' to include multiple variations"
+    },
+      {
+      "name": "outputFileTypes",
+      "type": "string",
+      "label": "Output file types for the scan results",
+      "defaultValue": "html",
+      "required": false,
+      "helpMarkDown": "1 or more optional output file types (json is required and hardcoded). Options are: html, csv, sarif, and xml, as detailed here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/output-schemas-run.html'. This takes multiple values via a comma-separated delimeter"
     },
     {
       "name": "postStatusCheckToPR",
@@ -91,10 +99,18 @@
     {
       "name": "postCommentsToPR",
       "type": "boolean",
-      "label": "Post comments to PR (true/false)",
+      "label": "Post summary comment to PR (true/false)",
       "defaultValue": "false",
       "required": false,
-      "helpMarkDown": "Boolean to dictate whether we POST comments to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+      "helpMarkDown": "Boolean to dictate whether we POST a summary comment to the PR. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    },
+    {
+      "name": "postInlineCommentsToPR",
+      "type": "boolean",
+      "label": "Post inline comments to PR (true/false)",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "Boolean to dictate whether we POST inline comments to the PR for specific violations. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
     },
     {
       "name": "scanFullBranch",

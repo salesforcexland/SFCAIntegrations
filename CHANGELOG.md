@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.4.0] - 2025-11-13
+
+### Added
+- Added the capability for inline comments of rule violations across a PR, with details from the json output
+- Allowed multiple engines/tags to be passed in to the scanner (as per SFCA v5.6.1 release capabilities, instead of custom logic)
+- Allowed multiple output file types to be passed in to the scanner
+### Changed
+- Updated the existing summary comment to use markdown instead and provide extra tech debt vs new issue detail along with severity information
+### Fixed 
+- 
+
 ## [1.3.0] - 2025-08-26
  
 ### Added
