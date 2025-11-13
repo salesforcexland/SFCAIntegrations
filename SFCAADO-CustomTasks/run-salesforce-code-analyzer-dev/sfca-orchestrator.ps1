@@ -108,7 +108,7 @@ if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ Violations '$env:totalViolations' (across all lines in the files found)exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        $warningMessage = "⚠️ Violations '$env:totalViolations' (across all lines in the files found) exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
         Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     else {
