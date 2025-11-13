@@ -57,7 +57,7 @@ env:
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
 | `configFilePath`       | No            | String   | Optional file path to the code-analyzer.yml file - further detail below |
 | `ruleSelector`         | No            | String   | Optional string for custom tag/engine selections (default is 'Recommended') - further detail below |
-| `outputFileTypes`         | No            | String   | Optional output file types with comma delimeters (json is required and hardcoded). Options are: html, csv, sarif, and xml |
+| `outputFileTypes`         | No            | String   | Optional output file types with comma delimeters (json is required and hardcoded internally). Options are: html, csv, sarif, and xml (default: `html`)|
 | `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (ADO REPOS ONLY) (default: `false`) |
 | `postCommentsToPR`  | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
 | `postInlineCommentsToPR`  | No            | Boolean  | Whether to POST inline comments throughout the PR for specific violations (ADO only, and Max 20) (default: `false`) |

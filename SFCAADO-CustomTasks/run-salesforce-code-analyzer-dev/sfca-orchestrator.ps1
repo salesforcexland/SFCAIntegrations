@@ -70,7 +70,7 @@ else {
 
         Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
 
-        if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) {
+        if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true") -or ($POST_INLINE_COMMENTS_TO_PR -eq "true")) {
             Write-Host 'POST PR Actions requested - passing into subfunction'
             . \"$PSScriptRoot/scripts/POSTPRActions.ps1\"
         } else {
