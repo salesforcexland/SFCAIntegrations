@@ -27,6 +27,10 @@ $POST_COMMENTS_TO_PR = $env:INPUT_POSTCOMMENTSTOPR
 Write-Host "Set POST_COMMENTS_TO_PR to: $POST_COMMENTS_TO_PR"
 $env:POST_COMMENTS_TO_PR = $POST_COMMENTS_TO_PR
 
+$POST_INLINE_COMMENTS_TO_PR = $env:INPUT_POSTINLINECOMMENTSTOPR
+Write-Host "Set POST_INLINE_COMMENTS_TO_PR to: $POST_INLINE_COMMENTS_TO_PR"
+$env:POST_INLINE_COMMENTS_TO_PR = $POST_INLINE_COMMENTS_TO_PR
+
 $SCAN_FULL_BRANCH = $env:INPUT_SCANFULLBRANCH
 Write-Host "Set SCAN_FULL_BRANCH to: $SCAN_FULL_BRANCH"
 $env:SCAN_FULL_BRANCH = $SCAN_FULL_BRANCH
@@ -39,9 +43,12 @@ $RULE_SELECTOR = $env:INPUT_RULESELECTOR
 Write-Host "Set RULE_SELECTOR to: $RULE_SELECTOR"
 $env:RULE_SELECTOR = $RULE_SELECTOR
 
+$OUTPUT_FILE_TYPES = $env:INPUT_OUTPUTFILETYPES
+Write-Host "Set OUTPUT_FILE_TYPES to: $OUTPUT_FILE_TYPES"
+$env:OUTPUT_FILE_TYPES = $OUTPUT_FILE_TYPES
+
 # If scanFullBranch is true, skip the delta logic entirely
 if ($SCAN_FULL_BRANCH -eq "true") {
-    # TODO: In future, we could pass the Graph Engine flag in here for full scans using engine 'sfge' (https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/engine-sfge.html)
     Write-Host "Scan full branch requested — skipping ScanDeltaFiles and running full scan on the branch '$env:BUILD_SOURCEBRANCH'."
     . "$PSScriptRoot/scripts/RunScannerAndAnalyse.ps1"
 }
@@ -63,7 +70,7 @@ else {
 
         Write-Host "Scan complete and violations analysed - setting whether violations were exceeded to be '$env:VIOLATIONS_EXCEEDED'"
 
-        if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true")) {
+        if (($POST_STATUS_CHECK_TO_PR -eq "true") -or ($POST_COMMENTS_TO_PR -eq "true") -or ($POST_INLINE_COMMENTS_TO_PR -eq "true")) {
             Write-Host 'POST PR Actions requested - passing into subfunction'
             . \"$PSScriptRoot/scripts/POSTPRActions.ps1\"
         } else {
@@ -89,23 +96,23 @@ function Write-TaskResult {
 if (($SCAN_FULL_BRANCH -eq "true") -or ($RELEVANT_FILES_FOUND -eq "true")) {
     # Final check to fail the build if needed (env var grabbed from CheckViolations.ps1)
     if ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") {
-        $failMessage = "❌ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
+        $failMessage = "❌ '$env:thresholdViolations' violations found (across all lines in the files found) exceeding the severity threshold of '$SEVERITY_THRESHOLD' and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($USE_SEVERITY_THRESHOLD -eq "true" -and $env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ '$env:thresholdViolations' violations found exceeding the severity threshold of '$SEVERITY_THRESHOLD', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        $warningMessage = "⚠️ '$env:thresholdViolations' violations found (across all lines in the files found) exceeding the severity threshold of '$SEVERITY_THRESHOLD', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
         Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "true") { # These next 2 must be using max violations instead of severity
-        $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found and STOP_ON_VIOLATIONS = true — failing the build."
+        $failMessage = "❌ Too many violations '($env:totalViolations/$MAXIMUM_VIOLATIONS)' found (across all lines in the files found) and STOP_ON_VIOLATIONS = true — failing the build."
         Write-TaskResult -Message $failMessage -Type 'error' -Result 'Failed'
     }
     elseif ($env:VIOLATIONS_EXCEEDED -eq "true" -and $STOP_ON_VIOLATIONS -eq "false") {
-        $warningMessage = "⚠️ Violations '$env:totalViolations' exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
+        $warningMessage = "⚠️ Violations '$env:totalViolations' (across all lines in the files found) exceeded maximum of '$MAXIMUM_VIOLATIONS', but STOP_ON_VIOLATIONS is false — build finishing as a warning"
         Write-TaskResult -Message $warningMessage -Type 'warning' -Result 'SucceededWithIssues'
     }
     else {
-        $passMessage = "✅ Build passed: violations found '$env:totalViolations' are either within the severity threshold, or less than the maximum allowed. Passed."
+        $passMessage = "✅ Build passed: violations found '$env:totalViolations' (across all lines in the files found) are either within the severity threshold, or less than the maximum allowed. Passed."
         Write-TaskResult -Message $passMessage -Result 'Succeeded'
     }
 }

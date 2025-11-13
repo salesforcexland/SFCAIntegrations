@@ -1,4 +1,5 @@
-$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/SFCAv5Results.json"
+# We've already uploaded the published artefacts at this point, but keep using the build staging directory for now
+$JSONOutputFilePath = "$env:BUILD_STAGINGDIRECTORY/results/SFCAv5Results.json"
 $totalViolations = 0
 
 Write-Host "Assessing violations in file: '$JSONOutputFilePath'"
