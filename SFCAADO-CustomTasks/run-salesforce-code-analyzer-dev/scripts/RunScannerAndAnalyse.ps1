@@ -28,17 +28,23 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
 }
 
 # 3. Install SF CLI (latest)
-Write-Host "Installing Salesforce CLI:"
-npm install -g @salesforce/cli@latest
 
-Write-Host "Installed Salesforce CLI version:"
+Write-Host "Current env:PATH is '$env:PATH'"
+# Check and install SF CLI if needed
+if (-not (Get-Command sf -ErrorAction SilentlyContinue)) {
+    Write-Host "SF CLI not found. Installing..."
+    npm install -g @salesforce/cli
+} else {
+    Write-Host "SF CLI already installed, using cache"
+}
+
+Write-Host "SF CLI version:"
 sf --version
-
-# 4. Install SFCA v5 plugin
-Write-Host "Installing Salesforce Code Analyzer plugin:"
+Write-Host "Installing Code Analyzer plugin (latest)..."
 sf plugins install code-analyzer@latest
+sf plugins
 
-# 5. Run SFCA v5 scan
+# 4. Run SFCA v5 scan
 Write-Host "Checked out branch ref is: $env:BUILD_SOURCEBRANCH"
 # If scanning the whole branch, use the sources directory and output the parent folders we find
 # If scanning only specific files, use the outputted files in the artefacts directory
@@ -142,7 +148,7 @@ else {
     exit 1
 }
 
-# 6. Publish the results as a pipeline artifact
+# 5. Publish the results as a pipeline artifact
 Write-Host "Scan complete. Uploading all scanner output files to 'salesforce-code-analyzer-results' in published artefacts"
 # Upload 1 output folder of files since there could be 1 or multiple
 Write-Host "##vso[artifact.upload artifactname=salesforce-code-analyzer-results;]$resultsFolder"
