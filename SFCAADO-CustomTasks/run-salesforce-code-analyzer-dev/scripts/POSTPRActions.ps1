@@ -122,8 +122,26 @@ $commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryI
 Write-Host "Checking if we were passed in the flag to leave inline comments on the PR (ADO ONLY)"
 # Only for ADO for now
 if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")) { 
-    $MaximumPRComments = 20 # TODO: Magic number here - probably not expose as an inbound param due to limits/overloading, but be aware
-    Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - current max number of comments is '$MaximumPRComments'"
+    #$MaximumPRComments = 20 # TODO: Magic number here - probably not expose as an inbound param due to limits/overloading, but be aware
+    # Attempt to cast to int. If it's not a number, it will throw an error or you can handle it.
+    if ($MAXIMUM_INLINE_COMMENTS_PER_PR -as [int]) {
+        $MaximumPRComments = [int]$MAXIMUM_INLINE_COMMENTS_PER_PR
+    } else {
+        Write-Host "Input '$MAXIMUM_INLINE_COMMENTS_PER_PR' is not a number. Defaulting to 20."
+        $MaximumPRComments = 20
+    }
+
+    # Hard-cap it in code so they can't spam the API
+    if ($MaximumPRComments -gt 100) { 
+        $MaximumPRComments = 100 
+        Write-Warning "Comment number provided '$MaximumPRComments' is over 100 - hard capping at 100 to prevent potential API overload. If you have more violations than this, consider using the summary comment and artefacts to share details instead of inline comments."
+    }
+    if ($MaximumPRComments -lt 1) { 
+        $MaximumPRComments = 1 
+        Write-Warning "Comment number provided '$MaximumPRComments' is less than 1 - setting to minimum of 1. If you want to disable inline comments, set POST_INLINE_COMMENTS_TO_PR to false."
+    }
+
+    Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - reasoned max number of comments is '$MaximumPRComments'"
     Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
     $commentCounter = 0 # Count how many comments we POST, and use a hard limit to prevent overloading the PR
     foreach ($violation in $violationsInPR) {

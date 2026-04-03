@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 5,
-    "Patch": 6
+    "Patch": 8
   },
   "inputs": [
     {
@@ -118,7 +118,11 @@
       "label": "Maximum number of comments per PR for each violation found",
       "defaultValue": "20",
       "required": false,
-      "helpMarkDown": "What are the maximum number of comments we want to layer on to PRs? NOTE: There could be performance/limit implications here from ADO"
+      "helpMarkDown": "What are the maximum number of comments we want to layer on to PRs? NOTE: There could be performance/limit implications here from ADO. Max 50 recommended",
+        "validation": {
+            "expression": "isMatch(value, '^([1-9]|[1-9][0-9]|50)$')",
+            "message": "Enter a number between 1 and 50."
+        }
     },
     {
       "name": "scanFullBranch",
