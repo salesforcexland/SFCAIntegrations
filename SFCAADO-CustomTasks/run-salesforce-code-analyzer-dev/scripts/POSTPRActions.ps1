@@ -120,10 +120,9 @@ Write-Host "---- PR Commenting Section ----"
 # Set the base ADO comment URI up for use in inline comments and/or summary
 $commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/threads?api-version=7.1"
 Write-Host "Checking if we were passed in the flag to leave inline comments on the PR (ADO ONLY)"
-# Only for ADO for now
+# Inline comments only for ADO for now
 if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")) { 
-    #$MaximumPRComments = 20 # TODO: Magic number here - probably not expose as an inbound param due to limits/overloading, but be aware
-    # Attempt to cast to int. If it's not a number, it will throw an error or you can handle it.
+    # Attempt to cast to int. If it's not a number, it will throw an error.
     if ($MAXIMUM_INLINE_COMMENTS_PER_PR -as [int]) {
         $MaximumPRComments = [int]$MAXIMUM_INLINE_COMMENTS_PER_PR
     } else {
@@ -143,12 +142,47 @@ if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")
 
     Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - reasoned max number of comments is '$MaximumPRComments'"
     Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
+    Write-Host "Checking existing comments first so we don't write duplicates and overload the PR"
+
+    $existingThreads = (Invoke-RestMethod -Uri "$commentURI" -Headers $headers -Method Get).value
+    Write-Host "Found '$($existingThreads.Count)' existing threads on PR '$($pullRequestId)'. Making a hashset to compare against"
+    $existingComments = @{}
+
+    foreach ($thread in $existingThreads) {
+        $path = $thread.threadContext.filePath
+        $line = $thread.threadContext.rightFileStart.line
+
+        foreach ($comment in $thread.comments) {
+            # Extract rule from your formatted message
+            # e.g. "⚠️ Engine: Apex - Message: NoTrailingWhitespace: blah"
+            if ($comment.content -match "Message:\s*(\w+)") {
+                $rule = $matches[1]
+            } else {
+                continue
+            }
+
+            $key = "$path|$line|$rule"
+            $existingComments[$key] = $true
+        }
+    }
+
     $commentCounter = 0 # Count how many comments we POST, and use a hard limit to prevent overloading the PR
     foreach ($violation in $violationsInPR) {
         $msg = "$($violation.rule): $($violation.message)"
         $filePath = $violation.locations[0].file
         $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
         $line = $violation.locations[0].startLine
+
+        # 🔑 Build stable dedupe key
+        $pathWithSlash = "/" + $relativePath
+        $rule = $violation.rule
+        $key = "$pathWithSlash|$line|$rule"
+
+        # 🚫 Skip if already exists
+        if ($existingComments.ContainsKey($key)) {
+            Write-Host "⏭️ Skipping duplicate comment: ${relativePath}:$line [$rule]"
+            continue
+        }
 
         $messageContent = "⚠️ Engine: " + $violation.engine + " - Message: " + $msg
         if ($null -ne $violation.resources) {
@@ -241,7 +275,7 @@ $commentText = @"
             Write-Host "Inline comments is true and we surpassed the threshold of '$MaximumPRComments' comments, so adding in a note"
             $commentText += @"
 
-- 📝 **Inline comments** were turned on for this run and they will be listed below, but only up to a maximum count of '$MaximumPRComments', so see the artefacts for further specifics
+- 📝 **Inline comments** were turned on for this run and are listed below, but only up to the maximum count of **'$MaximumPRComments'** provided, so see the artefacts for further details.
 "@
         }
     }

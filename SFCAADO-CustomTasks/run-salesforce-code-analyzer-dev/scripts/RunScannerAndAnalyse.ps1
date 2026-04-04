@@ -32,7 +32,7 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
 Write-Host "Current env:PATH is '$env:PATH'"
 # Check and install SF CLI if needed
 if (-not (Get-Command sf -ErrorAction SilentlyContinue)) {
-    Write-Host "SF CLI not found. Installing..."
+    Write-Host "SF CLI not found. Installing (latest)..."
     npm install -g @salesforce/cli
 } else {
     Write-Host "SF CLI already installed, using cache"
@@ -42,7 +42,7 @@ Write-Host "SF CLI version:"
 sf --version
 Write-Host "Installing Code Analyzer plugin (latest)..."
 sf plugins install code-analyzer@latest
-sf plugins
+sf plugins # TODO: May be irrelevant?
 
 # 4. Run SFCA v5 scan
 Write-Host "Checked out branch ref is: $env:BUILD_SOURCEBRANCH"
