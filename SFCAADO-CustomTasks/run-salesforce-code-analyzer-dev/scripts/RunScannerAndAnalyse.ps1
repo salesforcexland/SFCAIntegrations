@@ -35,7 +35,8 @@ if (-not (Get-Command sf -ErrorAction SilentlyContinue)) {
     Write-Host "SF CLI not found. Installing (latest)..."
     npm install -g @salesforce/cli
 } else {
-    Write-Host "SF CLI already installed, using cache"
+    # This allows users to 'pin' specific versions into the container before this extension if they wish, for security and caching purposes
+    Write-Host "SF CLI already installed, using existing version"
 }
 
 Write-Host "SF CLI version:"

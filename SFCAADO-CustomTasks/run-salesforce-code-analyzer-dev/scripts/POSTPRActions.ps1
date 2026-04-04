@@ -147,44 +147,68 @@ if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")
     $existingThreads = (Invoke-RestMethod -Uri "$commentURI" -Headers $headers -Method Get).value
     Write-Host "Found '$($existingThreads.Count)' existing threads on PR '$($pullRequestId)'. Making a hashset to compare against"
     $existingComments = @{}
-
+    Write-Host "🔍 Building existing comment lookup..."
     foreach ($thread in $existingThreads) {
-        $path = $thread.threadContext.filePath
-        $line = $thread.threadContext.rightFileStart.line
-
-        foreach ($comment in $thread.comments) {
-            # Extract rule from your formatted message
-            # e.g. "⚠️ Engine: Apex - Message: NoTrailingWhitespace: blah"
-            if ($comment.content -match "Message:\s*(\w+)") {
-                $rule = $matches[1]
-            } else {
-                continue
-            }
-
-            $key = "$path|$line|$rule"
-            $existingComments[$key] = $true
+        if ($null -eq $thread.threadContext -or
+            $null -eq $thread.threadContext.filePath -or
+            $null -eq $thread.threadContext.rightFileStart) {
+            Write-Host "ℹ️ Skipping thread not linked to a file/line (ID: $($thread.id)) - likely a summary comment or general comment on the PR as a whole"
+            continue
         }
+
+        $path = "/" + $thread.threadContext.filePath.TrimStart('/')
+        $line = [int]$thread.threadContext.rightFileStart.line
+        $fileLineKey = "$($path.ToLower())|$line"
+
+        Write-Host "📄 Thread $($thread.id): ${path}:$line"
+        foreach ($comment in $thread.comments) {
+            Write-Host "   💬 Raw comment: $($comment.content)"
+            if ($comment.content -match "Rule:\s*(.*?)\s*-\s*Message:") {
+                $rule = $matches[1].Trim().ToLower()
+                Write-Host "   ✅ Extracted rule: '$rule'"
+
+                # Add rule to existingComments hashset
+                if (-not $existingComments.ContainsKey($fileLineKey)) {
+                    $existingComments[$fileLineKey] = @()
+                }
+                $existingComments[$fileLineKey] += $rule
+            } else {
+                Write-Host "   ⚠️ Could not extract rule from comment"
+            }
+        }
+    }
+
+    Write-Host "📘 Final existingComments map:"
+    foreach ($key in $existingComments.Keys) {
+        Write-Host "   $key => $($existingComments[$key] -join ', ')"
     }
 
     $commentCounter = 0 # Count how many comments we POST, and use a hard limit to prevent overloading the PR
     foreach ($violation in $violationsInPR) {
-        $msg = "$($violation.rule): $($violation.message)"
-        $filePath = $violation.locations[0].file
+        $engine  = $violation.engine
+        $rule    = $violation.rule
+        $message = $violation.message
+
+        $filePath     = $violation.locations[0].file
         $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
-        $line = $violation.locations[0].startLine
+        $line         = [int]$violation.locations[0].startLine
 
-        # 🔑 Build stable dedupe key
-        $pathWithSlash = "/" + $relativePath
-        $rule = $violation.rule
-        $key = "$pathWithSlash|$line|$rule"
+        $pathWithSlash = "/" + $relativePath.TrimStart('/')
+        $line = [int]$line
+        $fileLineKey = "$($pathWithSlash.ToLower())|$line"
+        $ruleLower = $rule.ToLower()
 
-        # 🚫 Skip if already exists
-        if ($existingComments.ContainsKey($key)) {
-            Write-Host "⏭️ Skipping duplicate comment: ${relativePath}:$line [$rule]"
+        Write-Host "🔎 Checking if the violation for rule '$ruleLower' exists on this line:"
+        # 🚫 Skip if duplicate
+        if ($existingComments.ContainsKey($fileLineKey) -and $existingComments[$fileLineKey] -contains $ruleLower) {
+            Write-Host "   ⏭️ Existing rules on this line: $($existingComments[$fileLineKey] -join ', ') - skipping duplicate"
             continue
+        } else {
+            Write-Host "   🎯 No existing duplicate comments for this line - scaffolding new comment"
         }
 
-        $messageContent = "⚠️ Engine: " + $violation.engine + " - Message: " + $msg
+        # Construct the relevant inline comment including key information on engine/rule/message and resources (if applicable)
+        $messageContent = "⚠️ Engine: " + $engine + " - Rule: " + $rule + " - Message: " + $message
         if ($null -ne $violation.resources) {
             $messageContent += " - Relevant resource: $($violation.resources)"
         }
@@ -213,6 +237,9 @@ if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")
         } catch {
             Write-Warning "Failed to post PR comment: $_"
         }
+
+        # Adding to existingComments list so we don't dupe on the same run
+        $existingComments[$key] = $true
 
         if ($commentCounter -ge $MaximumPRComments) { #
             $MaximumPRCommentsReached = $true # use this in the summary later
