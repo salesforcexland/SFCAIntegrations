@@ -1,0 +1,188 @@
+<?xml version="1.0" ?>
+<ruleset
+	name="Apex Best Practices Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd"
+>
+	<description>
+		Custom rules for Apex best practices (modifiers, test classes, code
+		quality)
+	</description>
+	<rule
+		name="TestClassIsParallel"
+		language="apex"
+		message="Test classes must have @IsTest(IsParallel=true) annotation to enable parallel test execution"
+		class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+	>
+		<description>
+			Test classes must include IsParallel=true in their @IsTest
+			annotation
+			to explicitly enable parallel test execution. While tests run in
+			parallel by default in Salesforce, explicitly setting IsParallel=true
+			ensures parallel execution even if organization settings change,
+			improving test performance by allowing tests to run concurrently,
+			reducing overall test execution time and improving developer
+			productivity.
+
+			Test classes that use restricted operations are exempt from this
+			requirement, as they cannot run in parallel anyway. Restricted
+			operations include:
+			- Using @IsTest(seeAllData=true) - Tests with seeAllData=true cannot
+			  run in parallel due to data contention issues
+			- Calling Test.getStandardPricebookId()
+			- Calling System.schedule() or System.enqueueJob()
+			- Inserting ContentNote SObjects
+			- Creating User or GroupMember SObjects
+			- Using SObjects that can't be used together in DML operations
+
+			Version: 2.1.0
+		</description>
+		<priority>3</priority>
+		<properties>
+			<property name="xpath">
+				<value>
+					<![CDATA[
+					//UserClass[
+						let $isTestAnnot := .//Annotation[(@Image = 'IsTest' or @Name = 'IsTest')]
+						return exists($isTestAnnot)
+							and not($isTestAnnot/AnnotationParameter[@Name = 'IsParallel' and (@Value = 'true' or @Image = 'true')])
+							and not($isTestAnnot/AnnotationParameter[@Name = 'seeAllData' and (@Value = 'true' or @Image = 'true')])
+							and not(.//MethodCallExpression[@MethodName = ('getStandardPricebookId', 'schedule', 'enqueueJob')][child::ReferenceExpression[@Image = ('Test', 'System')]])
+							and not(.//VariableDeclaration[@Type = ('ContentNote', 'User', 'GroupMember')])
+					]
+					]]>
+				</value>
+			</property>
+		</properties>
+		<example>
+			<![CDATA[
+			// Violation: Test class without IsParallel=true
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        // Test code
+			    }
+			}
+			
+			// Violation: Test class with IsParallel=false
+			@IsTest(IsParallel=false)
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        // Test code
+			    }
+			}
+			
+			// Valid: Test class with IsParallel=true
+			@IsTest(IsParallel=true)
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        // Test code
+			    }
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Test class using seeAllData=true (exempt from IsParallel requirement)
+			@IsTest(seeAllData=true)
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        // Test code with access to all org data
+			    }
+			}
+			
+			// Valid: Test class using restricted operations (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        Id pricebookId = Test.getStandardPricebookId();
+			    }
+			}
+			
+			// Valid: Test class using System.schedule() (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        System.schedule('Test', '0 0 0 * * ?', new TestSchedulable());
+			    }
+			}
+			
+			// Valid: Test class using System.enqueueJob() (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        System.enqueueJob(new TestQueueable());
+			    }
+			}
+			
+			// Valid: Test class inserting ContentNote (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        ContentNote note = new ContentNote();
+			        insert note;
+			    }
+			}
+			
+			// Valid: Test class inserting User (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        User u = new User();
+			        insert u;
+			    }
+			}
+			
+			// Valid: Test class inserting GroupMember (exempt from IsParallel requirement)
+			@IsTest
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        GroupMember gm = new GroupMember();
+			        insert gm;
+			    }
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Test class with IsParallel=true (alternative syntax)
+			@IsTest(IsParallel = true)
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        // Test code
+			    }
+			}
+			
+			// Valid: Parallel test class with valid operations
+			@IsTest(IsParallel=true)
+			private class MyTestClass {
+			    @IsTest
+			    static void testMethod() {
+			        Account acc = new Account(Name = 'Test');
+			        insert acc;
+			        System.debug('Test');
+			    }
+			}
+			
+			// Valid: Non-test classes are not flagged
+			public class MyRegularClass {
+			    public void regularMethod() {
+			        // Regular code
+			    }
+			}
+			]]>
+		</example>
+	</rule>
+</ruleset>

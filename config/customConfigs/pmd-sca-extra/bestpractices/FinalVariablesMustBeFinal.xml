@@ -1,0 +1,144 @@
+<?xml version="1.0" ?>
+<ruleset
+	name="Apex Best Practices Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd"
+>
+	<description>
+		Custom rules for Apex best practices (modifiers, test classes, code
+		quality)
+	</description>
+	<rule
+		name="FinalVariablesMustBeFinal"
+		language="apex"
+		message="Variables that are never reassigned must be declared as final to enforce immutability and improve code clarity"
+		class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+	>
+		<description>
+			Detects variables that are never reassigned after their initial
+			declaration and flags them as violations if they are not declared as
+			final. This rule enforces immutability where appropriate, improves code
+			clarity by indicating that the variable's value won't change, and helps
+			prevent accidental reassignment bugs.
+
+			The rule checks local variables within methods and excludes:
+			- Loop variables (for and for-each loops)
+			- Method parameters
+			- Variables that are reassigned, incremented, decremented, or modified
+			  with compound assignment operators
+
+			Version: 1.0.1
+		</description>
+		<priority>3</priority>
+		<properties>
+			<property name="xpath">
+				<value>
+					<![CDATA[
+					let $modificationOps := (
+							'+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '>>>=',
+							'&amp;=', '^=', '|='
+						),
+						$incrementOps := ('++', '--')
+					return //VariableDeclaration[
+						not(parent::VariableDeclarationStatements/ModifierNode[@Final = true()])
+						and not(ancestor::Parameter)
+						and not(ancestor::ForLoopStatement)
+						and not(ancestor::ForEachStatement)
+						and ancestor::Method
+						and (
+							let $varName := VariableExpression/@Image,
+								$method := ancestor::Method[1],
+								$beginLine := @BeginLine
+							return not(
+								$method//AssignmentExpression[
+									.//VariableExpression/@Image = $varName
+									and @BeginLine > $beginLine
+								]
+								or $method//UnaryExpression[
+									.//VariableExpression/@Image = $varName
+									and @BeginLine > $beginLine
+								]
+								or $method//BinaryExpression[
+									@Op = $modificationOps
+									and .//VariableExpression/@Image = $varName
+									and @BeginLine > $beginLine
+								]
+								or $method//*[
+									(@Op = $incrementOps
+									or local-name() = ('PostfixExpression', 'PrefixExpression'))
+									and .//VariableExpression/@Image = $varName
+									and @BeginLine > $beginLine
+								]
+							)
+						)
+					]
+					]]>
+				</value>
+			</property>
+		</properties>
+		<example>
+			<![CDATA[
+			// Violation: Variable never reassigned but not declared final
+			public void method() {
+			    Integer value = 5;  // Should be final
+			    String name = 'test';  // Should be final
+			    // value and name are never reassigned
+			}
+			
+			// Valid: Variables declared as final
+			public void method() {
+			    final Integer value = 5;  // Valid
+			    final String name = 'test';  // Valid
+			    // value and name are never reassigned
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Variable that is reassigned (cannot be final)
+			public void method() {
+			    Integer value = 5;
+			    value = 10;  // Reassigned, so cannot be final
+			}
+			
+			// Valid: Variable with increment/decrement (cannot be final)
+			public void method() {
+			    Integer count = 0;
+			    count++;  // Modified, so cannot be final
+			}
+			
+			// Valid: Variable with compound assignment (cannot be final)
+			public void method() {
+			    Integer sum = 0;
+			    sum += 5;  // Modified with compound assignment, so cannot be final
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Loop variables are excluded (cannot be final)
+			public void method() {
+			    for (Integer i = 0; i < 10; i++) {
+			        // Loop variable 'i' is excluded
+			    }
+			}
+			
+			// Valid: Parameters are excluded (cannot be final in this context)
+			public void method(Integer param) {
+			    // Parameter 'param' is excluded
+			}
+			
+			// Valid: Catch block exception variables are excluded (cannot be declared as final in Apex)
+			public void method() {
+			    try {
+			        // some code
+			    } catch (Exception e) {
+			        // Exception variable 'e' cannot be declared as final in Apex
+			        // (it is implicitly final and cannot be explicitly declared as final)
+			    }
+			}
+			]]>
+		</example>
+	</rule>
+</ruleset>

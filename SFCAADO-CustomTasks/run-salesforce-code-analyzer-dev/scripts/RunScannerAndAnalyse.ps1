@@ -25,11 +25,35 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
     else {
         Write-Warning "⚠ Config file not found at: '$configFilePath'. Proceeding without it."
     }
+
+    Write-Host "📁 STARTING CONFIG SUBFOLDER COPY SECTION"
+    if (-not [string]::IsNullOrWhiteSpace($env:CONFIG_SUBFOLDER_PATH)) {
+
+        $rawFolderPath = $env:CONFIG_SUBFOLDER_PATH
+
+        if (-not (Split-Path $rawFolderPath -IsAbsolute)) {
+            $configSubfolderPath = Join-Path $env:BUILD_SOURCESDIRECTORY $rawFolderPath
+        } else {
+            $configSubfolderPath = $rawFolderPath
+        }
+
+        Write-Host "📁 Config folder provided: '$configSubfolderPath'"
+
+        if (Test-Path $configSubfolderPath -PathType Container) {
+            Copy-Item -Path $configSubfolderPath -Destination $configFolder -Recurse -Force
+
+            Write-Host "✅ Config folder copied to '$configFolder'"
+            $ConfigFileValid = $true
+        }
+        else {
+            Write-Warning "⚠ Config folder not found at: '$configSubfolderPath'"
+        }
+        Write-Host "📂 Switching to config staging directory: $configFolder"
+        Set-Location $configFolder
+    }
 }
 
-# 3. Install SF CLI (latest)
-
-Write-Host "Current env:PATH is '$env:PATH'"
+# 3. Install SF CLI (latest if not already present)
 # Check and install SF CLI if needed
 if (-not (Get-Command sf -ErrorAction SilentlyContinue)) {
     Write-Host "SF CLI not found. Installing (latest)..."

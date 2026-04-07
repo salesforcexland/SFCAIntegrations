@@ -170,7 +170,7 @@ engines:
     # We currently support both flat and legacy ESLint configuration files, but will be removing support for legacy eslintrc
     # ESLint configuration files in the coming months.
     # See https://eslint.org/docs/latest/use/configure/configuration-files to learn more.
-    eslint_config_file: null
+    eslint_config_file: ./customConfigs/ESLint/eslint.config.js
 
     # Your project's legacy ".eslintignore" file. May be an absolute path or a path relative to the config_root.
     # If null and auto_discover_eslint_config is true, then Code Analyzer will attempt to discover/apply it automatically.
@@ -243,7 +243,7 @@ engines:
   pmd:
 
     # Whether to turn off the 'pmd' engine so that it is not included when running Code Analyzer commands.
-    disable_engine: false
+    disable_engine: true
 
     # Indicates the specific 'java' command associated with the JRE or JDK to use for the 'pmd' engine.
     # May be provided as the name of a command that exists on the path, or an absolute file path location.
@@ -289,8 +289,54 @@ engines:
     #   - or a relative resource found on the Java classpath.
     # Not all custom rules can be fully defined within an xml ruleset file. For example, Java based rules may be defined in jar files.
     # In these cases, you will need to also add your additional files to the Java classpath using the 'java_classpath_entries' field.
-    # See https://pmd.github.io/pmd/pmd_userdocs_making_rulesets.html to learn more about PMD rulesets.
-    custom_rulesets: []
+    # See https://pmd.github.io/pmd/pmd_userdocs_making_customConfigs/pmd-sca-extra.html to learn more about PMD customConfigs/pmd-sca-extra.
+    custom_rulesets:
+            - customConfigs/pmd-sca-extra/bestpractices/FinalVariablesMustBeFinal.xml
+            - customConfigs/pmd-sca-extra/bestpractices/RegexPatternsMustBeStaticFinal.xml
+            - customConfigs/pmd-sca-extra/bestpractices/StaticMethodsMustBeStatic.xml
+            - customConfigs/pmd-sca-extra/bestpractices/StaticVariablesMustBeFinalAndScreamingSnakeCase.xml
+            - customConfigs/pmd-sca-extra/bestpractices/TestClassIsParallel.xml
+            - customConfigs/pmd-sca-extra/codestyle/AvoidMagicNumbers.xml
+            - customConfigs/pmd-sca-extra/codestyle/AvoidOneLinerMethods.xml
+            - customConfigs/pmd-sca-extra/codestyle/InnerClassesMustBeOneWord.xml
+            - customConfigs/pmd-sca-extra/codestyle/MapShouldBeInitializedWithValues.xml
+            - customConfigs/pmd-sca-extra/codestyle/MultipleStringContainsCalls.xml
+            - customConfigs/pmd-sca-extra/codestyle/NoMethodCallsAsArguments.xml
+            - customConfigs/pmd-sca-extra/codestyle/NoMethodCallsInConditionals.xml
+            - customConfigs/pmd-sca-extra/codestyle/NoSingleLetterVariableNames.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferBuilderPatternChaining.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferConcatenationOverStringJoinWithEmpty.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferMethodCallsInLoopConditions.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferNullCoalescingOverTernary.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferSafeNavigationOperator.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferStringJoinOverConcatenation.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferStringJoinOverMultipleNewlines.xml
+            - customConfigs/pmd-sca-extra/codestyle/PreferStringJoinWithSeparatorOverEmpty.xml
+            - customConfigs/pmd-sca-extra/codestyle/SingleArgumentMustBeSingleLine.xml
+            - customConfigs/pmd-sca-extra/codestyle/VariablesMustNotShareNamesWithClasses.xml
+            - customConfigs/pmd-sca-extra/design/AvoidLowValueWrapperMethods.xml
+            - customConfigs/pmd-sca-extra/design/AvoidTrivialPropertyGetters.xml
+            - customConfigs/pmd-sca-extra/design/ClassesMustHaveMethods.xml
+            - customConfigs/pmd-sca-extra/design/CombineNestedIfStatements.xml
+            - customConfigs/pmd-sca-extra/design/EnumMinimumValues.xml
+            - customConfigs/pmd-sca-extra/design/InnerClassesCannotBeStatic.xml
+            - customConfigs/pmd-sca-extra/design/InnerClassesCannotHaveStaticMembers.xml
+            - customConfigs/pmd-sca-extra/design/NoCustomParameterObjects.xml
+            - customConfigs/pmd-sca-extra/design/NoInterfacesEndingWithCallback.xml
+            - customConfigs/pmd-sca-extra/design/NoParameterClasses.xml
+            - customConfigs/pmd-sca-extra/design/NoThisOutsideConstructors.xml
+            - customConfigs/pmd-sca-extra/design/NoUnnecessaryAttributeVariables.xml
+            - customConfigs/pmd-sca-extra/design/NoUnnecessaryReturnVariables.xml
+            - customConfigs/pmd-sca-extra/design/UnusedVariableNotReturnedOrPassed.xml
+            - customConfigs/pmd-sca-extra/design/PreferPropertySyntaxOverGetterMethods.xml
+            - customConfigs/pmd-sca-extra/design/PreferSwitchOverIfElseChains.xml
+            - customConfigs/pmd-sca-extra/design/SingleParameterMustBeSingleLine.xml
+            - customConfigs/pmd-sca-extra/design/DmlInLoopAcrossMethods.xml
+            - customConfigs/pmd-sca-extra/documentation/ExceptionDocumentationRequired.xml
+            - customConfigs/pmd-sca-extra/documentation/MethodsRequireExampleTag.xml
+            - customConfigs/pmd-sca-extra/documentation/ProhibitAuthorSinceVersionTags.xml
+            - customConfigs/pmd-sca-extra/documentation/SingleLineDocumentationFormat.xml
+            - customConfigs/pmd-sca-extra/documentation/ValidGroupTagValues.xml
 
   # ======================================================================
   # CPD ENGINE CONFIGURATION
@@ -397,7 +443,7 @@ engines:
   flow:
 
     # Whether to turn off the 'flow' engine so that it is not included when running Code Analyzer commands.
-    disable_engine: false
+    disable_engine: true
 
     # Indicates the specific Python command to use for the 'Flow Scanner' engine.
     # May be provided as the name of a command that exists on the path, or an absolute file path location.

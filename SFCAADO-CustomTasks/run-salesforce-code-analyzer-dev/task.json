@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 5,
-    "Patch": 21
+    "Patch": 25
   },
   "inputs": [
     {
@@ -71,6 +71,14 @@
       "defaultValue": "",
       "required": false,
       "helpMarkDown": "Optional absolute path to a custom Salesforce Code Analyzer configuration file (e.g ./config/code-analyzer.yml) - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
+    },
+    {
+      "name": "configSubfolderPath",
+      "type": "string",
+      "label": "Code Analyzer subfolder (for extra rules/configs) filepath",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Optional absolute path to a subfolder of extra config files (e.g custom PMD rules, custom ESLint config) - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
     },
     {
       "name": "ruleSelector",
