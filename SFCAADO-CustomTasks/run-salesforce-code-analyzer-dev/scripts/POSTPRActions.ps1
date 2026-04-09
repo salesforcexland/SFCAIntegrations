@@ -123,21 +123,19 @@ Write-Host "Checking if we were passed in the flag to leave inline comments on t
 # Inline comments only for ADO for now
 if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")) { 
     # Attempt to cast to int. If it's not a number, it will throw an error.
-    if ($MAXIMUM_INLINE_COMMENTS_PER_PR -as [int]) {
-        $MaximumPRComments = [int]$MAXIMUM_INLINE_COMMENTS_PER_PR
+    [int]$parsedValue = 0
+    if ([int]::TryParse($MAXIMUM_INLINE_COMMENTS_PER_PR, [ref]$parsedValue) -and $parsedValue -ge 1) {
+        $MaximumPRComments = $parsedValue
     } else {
-        Write-Host "Input '$MAXIMUM_INLINE_COMMENTS_PER_PR' is not a number. Defaulting to 20."
+        Write-Host "Input '$MAXIMUM_INLINE_COMMENTS_PER_PR' is invalid or less than 1. Defaulting to 20."
+        Write-Host "If you want to disable inline comments, set POST_INLINE_COMMENTS_TO_PR to false"
         $MaximumPRComments = 20
     }
 
     # Hard-cap it in code so they can't spam the API
     if ($MaximumPRComments -gt 100) { 
-        $MaximumPRComments = 100 
         Write-Warning "Comment number provided '$MaximumPRComments' is over 100 - hard capping at 100 to prevent potential API overload. If you have more violations than this, consider using the summary comment and artefacts to share details instead of inline comments."
-    }
-    if ($MaximumPRComments -lt 1) { 
-        $MaximumPRComments = 1 
-        Write-Warning "Comment number provided '$MaximumPRComments' is less than 1 - setting to minimum of 1. If you want to disable inline comments, set POST_INLINE_COMMENTS_TO_PR to false."
+        $MaximumPRComments = 100 
     }
 
     Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - reasoned max number of comments is '$MaximumPRComments'"
