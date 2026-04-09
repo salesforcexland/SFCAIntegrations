@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.5.0] - 2026-04-XX
+## [1.5.0] - 2026-04-09
 
 ### Added
 - Parameter for maximum number of inline comments (instead of a magic number, up to a hard limit of 100)
