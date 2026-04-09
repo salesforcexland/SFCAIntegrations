@@ -312,7 +312,7 @@ $commentText = @"
 - 📝 **Inline comments** were turned on for this run and are listed below, but some comments already existed from prior runs, so skipped those duplicates.
 "@
         }
-        else { # if we've not hit duplicates or max comments, leave a standard note
+        elseif($env:POST_INLINE_COMMENTS_TO_PR -eq 'true') { # if we've not hit duplicates or max comments, leave a standard note for inline comments
             Write-Host "Inline comments is true, with no duplicates or max comments hit, so adding in a note"
             $commentText += @"
 
