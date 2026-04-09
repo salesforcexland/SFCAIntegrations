@@ -13,7 +13,7 @@
   "version": {
     "Major": 1,
     "Minor": 5,
-    "Patch": 25
+    "Patch": 34
   },
   "inputs": [
     {
@@ -78,7 +78,7 @@
       "label": "Code Analyzer subfolder (for extra rules/configs) filepath",
       "defaultValue": "",
       "required": false,
-      "helpMarkDown": "Optional absolute path to a subfolder of extra config files (e.g custom PMD rules, custom ESLint config) - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
+      "helpMarkDown": "Optional absolute path to a subfolder of extra config files (e.g custom PMD rules, custom ESLint config) - depends on configFilePath being passed too - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
     },
     {
       "name": "ruleSelector",
@@ -123,10 +123,10 @@
     {
       "name": "maximumInlineCommentsPerPR",
       "type": "string",
-      "label": "Maximum number of comments per PR for each violation found",
+      "label": "Maximum number of comments per PR for the violations found",
       "defaultValue": "20",
       "required": false,
-      "helpMarkDown": "What are the maximum number of comments we want to layer on to PRs? NOTE: There could be performance/limit implications here from ADO. Max 50 recommended",
+      "helpMarkDown": "What are the maximum number of comments we want to layer on to PRs? NOTE: There could be performance/limit implications here from ADO. Max 50 recommended, and hard capped internally at 100",
         "validation": {
             "expression": "isMatch(value, '^([1-9]|[1-9][0-9]|50)$')",
             "message": "Enter a number between 1 and 50."

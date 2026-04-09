@@ -53,16 +53,18 @@ env:
 | `severityThreshold`    | Only if `useSeverityThreshold` is true | PickList | Severity level to fail on (`1` = Critical → `5` = Info) |
 | `maximumViolations`    | No            | Integer  | Max allowed violations before failing (default: `10`) |
 | `configFilePath`       | No            | String   | Optional file path to the code-analyzer.yml file - further detail [here](#️-code-analyzeryml) |
+| `configSubfolderPath`       | No            | String   | Optional path to a subfolder of extra config files (e.g custom PMD rules), to use with the code-analyzer.yml file which needs to be passed in too - further detail [here](#️-code-analyzeryml) |
 | `ruleSelector`         | No            | String   | Optional string for custom tag/engine selections (default is 'Recommended') - further detail [here](#-rule-selector) |
 | `outputFileTypes`         | No            | String   | Optional output file types with comma delimeters (json is required and hardcoded internally). Options are: html, csv, sarif, and xml (default: `html`)|
 | `postStatusCheckToPR`  | No            | Boolean  | Whether to POST a result status back to the PR (ADO REPOS ONLY) (default: `false`) |
 | `postCommentsToPR`     | No            | Boolean  | Whether to POST a summary comment with link to results back to the PR (default: `false`) |
-| `postInlineCommentsToPR`  | No            | Boolean  | Whether to POST inline comments throughout the PR for specific violations (ADO only, and Max 20) (default: `false`) |
+| `postInlineCommentsToPR`  | No            | Boolean  | Whether to POST inline comments throughout the PR for specific violations (ADO only) (default: `false`) |
+| `maximumInlineCommentsPerPR`       | No            | String   | Maximum number of comments per PR for the violations found. Max 50 recommended due to performance concerns, and hard capped at 100 internally |
 | `scanFullBranch`       | No            | Boolean  | Whether we want to run code analyzer against an entire branch rather than PR deltas (default: `false`) |
 
 ---
 
-## 🗂️ Code Analyzer.yml
+## 🗂️ Code Analyzer.yml & extra config files
 - With code analyzer v5, you can use a code-analyzer.yml configuration file (explained in detail [here](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html)) to control engines, tags, severities, and much more
 - This extension can leverage that custom configuration file in your scans for both PRs and full branch scans
 - In testing I've placed this file in a 'config' folder at the root of the repository, and referenced it as so in the parameter './config/code-analyzer.yml' to grab the file and copy it into the runner for use, so make sure it's accessible
@@ -70,9 +72,9 @@ env:
 - Certain **caveats** are below:
   - You need to ensure the code-analyzer.yml file is present on all branches relevant for PR/full scans, or it'll get skipped
   - Consider starting with the example yml files i've provided HERE, with example log/rule overrides
-  - Ensure the `config_root:` property is left as `null` to allow dynamic passing of log outputs
-  - There is currently a lack of support for extra config files (eslint, pmd etc) due to a copy and relative path problem - this will be tackled in a future update
-  - Some config could also contradict/cause confusion with the severity threshold and rule selector in terms of severities scanned and reported on
+  - Ensure the `config_root:` property is left as `null` to allow dynamic passing of log outputs and relative paths for any extra config files like PMD rules/ESlint config
+    - If you're passing in `configSubfolderPath`, make sure the paths in your code-analyzer.yml file are set up correctly using relative pathing, such as `customConfigs/pmd-sca-extra/bestpractices/FinalVariablesMustBeFinal.xml` where the entire `customConfigs` folder has been passed in and copied.
+  - Some config could also contradict/cause confusion with the severity threshold and rule selector in terms of severities scanned and reported on, and Recommended rule selection may not include custom rules
 
 ---
 
@@ -181,10 +183,14 @@ steps:
       useSeverityThreshold: true
       severityThreshold: '3'
       extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
-      postStatusCheckToPR: true
+      postStatusCheckToPR: false
       postCommentsToPR: true
-      configFilePath: './config/code-analyzer-full.yml'
-      ruleSelector: 'Recommended'
+      configFilePath: './config/code-analyzer.yml'
+      configSubfolderPath: './config/customConfigs'
+      ruleSelector: 'eslint,pmd'
+      outputFileTypes: 'html,sarif'
+      postInlineCommentsToPR: true
+      maximumInlineCommentsPerPR: 30
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 

@@ -26,11 +26,10 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
         Write-Warning "⚠ Config file not found at: '$configFilePath'. Proceeding without it."
     }
 
-    Write-Host "📁 STARTING CONFIG SUBFOLDER COPY SECTION"
+    Write-Host "📁 Checking if configSubfolders were requested, are available, and starting the copy if so"
     if (-not [string]::IsNullOrWhiteSpace($env:CONFIG_SUBFOLDER_PATH)) {
 
         $rawFolderPath = $env:CONFIG_SUBFOLDER_PATH
-
         if (-not (Split-Path $rawFolderPath -IsAbsolute)) {
             $configSubfolderPath = Join-Path $env:BUILD_SOURCESDIRECTORY $rawFolderPath
         } else {
@@ -43,10 +42,9 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
             Copy-Item -Path $configSubfolderPath -Destination $configFolder -Recurse -Force
 
             Write-Host "✅ Config folder copied to '$configFolder'"
-            $ConfigFileValid = $true
         }
         else {
-            Write-Warning "⚠ Config folder not found at: '$configSubfolderPath'"
+            Write-Warning "⚠️ Config folder not found at: '$configSubfolderPath' - nothing to copy"
         }
         Write-Host "📂 Switching to config staging directory: $configFolder"
         Set-Location $configFolder
@@ -67,7 +65,6 @@ Write-Host "SF CLI version:"
 sf --version
 Write-Host "Installing Code Analyzer plugin (latest)..."
 sf plugins install code-analyzer@latest
-sf plugins # TODO: May be irrelevant?
 
 # 4. Run SFCA v5 scan
 Write-Host "Checked out branch ref is: $env:BUILD_SOURCEBRANCH"
