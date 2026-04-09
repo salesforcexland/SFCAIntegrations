@@ -26,8 +26,8 @@ if(-not [string]::IsNullOrWhiteSpace($env:CONFIG_FILE_PATH)) {
         Write-Warning "⚠ Config file not found at: '$configFilePath'. Proceeding without it."
     }
 
-    Write-Host "📁 Checking if configSubfolders were requested, are available, and starting the copy if so"
-    if (-not [string]::IsNullOrWhiteSpace($env:CONFIG_SUBFOLDER_PATH)) {
+    Write-Host "📁 Checking if configSubfolders were requested, are available, the code-analyzer.yml has been copied, and starting the copy if so"
+    if (-not [string]::IsNullOrWhiteSpace($env:CONFIG_SUBFOLDER_PATH) -and $ConfigFileValid) {
 
         $rawFolderPath = $env:CONFIG_SUBFOLDER_PATH
         if (-not (Split-Path $rawFolderPath -IsAbsolute)) {
