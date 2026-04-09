@@ -1,4 +1,6 @@
 import { LightningElement, track } from 'lwc'; // Import the right libraries
+   console.log("test");
+   alert("test");
 export default class MyFirstWebComponent extends LightningElement {
     @track
     contacts = [
@@ -18,4 +20,5 @@ export default class MyFirstWebComponent extends LightningElement {
             Title: 'CEO',
         },
     ];
+ 
 }

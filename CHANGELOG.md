@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.0] - 2026-04-XX
+
+### Added
+- Parameter for maximum number of inline comments (instead of a magic number, up to a hard limit of 100)
+- Parameter for extra config folder to copy over and use as part of code-analyzer.yml config, allowing a recursive copy of those files and use in the scanner run (Issue #21)
+### Changed
+- Prevented duplicate inline comments being POSTed onto a PR when multiple runs occur, so only new comments are added (Issue #25)
+- Modified the SF CLI logic to check if a version exists on the runner and stick with that one if so, for pre built runners pinning specific versions, otherwise installing @latest
+### Fixed 
+- Issue with summary markdown comment when totalViolations were 0
+- 
+
 ## [1.4.0] - 2025-11-13
 
 ### Added

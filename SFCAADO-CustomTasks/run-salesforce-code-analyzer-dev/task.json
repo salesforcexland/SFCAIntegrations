@@ -12,8 +12,8 @@
   "iconPath": "icon.png",
   "version": {
     "Major": 1,
-    "Minor": 4,
-    "Patch": 43
+    "Minor": 5,
+    "Patch": 38
   },
   "inputs": [
     {
@@ -73,6 +73,14 @@
       "helpMarkDown": "Optional absolute path to a custom Salesforce Code Analyzer configuration file (e.g ./config/code-analyzer.yml) - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
     },
     {
+      "name": "configSubfolderPath",
+      "type": "string",
+      "label": "Code Analyzer subfolder (for extra rules/configs) filepath",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Optional absolute path to a subfolder of extra config files (e.g custom PMD rules, custom ESLint config) - depends on configFilePath being passed too - more detail here 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html'"
+    },
+    {
       "name": "ruleSelector",
       "type": "string",
       "label": "Rule selector argument (e.g Recommended, eslint, pmd, (pmd,retire-js):(Performance,Security) etc). Can include multiple engines/tags",
@@ -111,6 +119,18 @@
       "defaultValue": "false",
       "required": false,
       "helpMarkDown": "Boolean to dictate whether we POST inline comments to the PR for specific violations. Requires setting 'env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)' in your pipeline yml."
+    },
+    {
+      "name": "maximumInlineCommentsPerPR",
+      "type": "string",
+      "label": "Maximum number of comments per PR for the violations found",
+      "defaultValue": "20",
+      "required": false,
+      "helpMarkDown": "What are the maximum number of comments we want to layer on to PRs? NOTE: There could be performance/limit implications here from ADO. Max 50 recommended, and hard capped internally at 100",
+        "validation": {
+            "expression": "isMatch(value, '^([1-9]|[1-9][0-9]|50)$')",
+            "message": "Enter a number between 1 and 50."
+        }
     },
     {
       "name": "scanFullBranch",

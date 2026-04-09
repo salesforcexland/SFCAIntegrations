@@ -1,0 +1,116 @@
+trigger: none 
+pr: none      # We don't need any branch/PR triggers here as we'll control it with Build Policies
+
+schedules:
+  - cron: "45 20 * * *" # Modify this accordingly to run on the right schedule
+    displayName: "Daily 21:45 BST run"
+    branches:
+      include:
+        - feature/SFCA-Custom-Task-Testing-v2 # Change this to be the full branch you want to scan, e.g 'main' or 'staging'
+    always: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  SFCLI_DIR: $(Agent.ToolsDirectory)/sfcli
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  # Restore npm cache for global installs
+  - task: Cache@2
+    displayName: Restore npm cache
+    inputs:
+      key: 'npm-global-cache | ubuntu-latest | v1'
+      restoreKeys: |
+        npm-global-cache | ubuntu-latest
+      path: $(npm_config_cache)
+  
+  - script: |
+      # Access CacheRestored variable correctly in Bash
+      if [ "$CacheRestored_npm_global_cache" = "true" ]; then
+        echo "✅ NPM cache restored!"
+      else
+        echo "⚠️ NPM cache miss — first run or key changed."
+      fi
+
+      echo "Contents of npm cache folder:"
+      ls -la $(npm_config_cache)/_cacache || echo "_cacache folder missing"
+      du -sh $(npm_config_cache) || echo "Cache size not available"
+    displayName: Log npm cache state
+
+  # Install SF CLI if not present (fast on subsequent runs)
+  - script: |
+      set -e
+
+      # Make SF CLI bin available
+      export PATH="$(SFCLI_DIR)/bin:$PATH"
+      export NPM_CONFIG_CACHE=$(npm_config_cache)
+
+      # Avoid npm doing unnecessary audits, scripts, optional deps
+      NPM_FLAGS="--ignore-scripts --no-audit --no-fund --prefer-offline --no-package-lock"
+
+      if command -v sf >/dev/null 2>&1; then
+        echo "Using cached SF CLI"
+        sf --version
+      else
+        echo "SF CLI not found. Installing..."
+        mkdir -p $(SFCLI_DIR)
+        npm install -g @salesforce/cli --prefix $(SFCLI_DIR) $NPM_FLAGS
+        echo "Installed SF CLI version:"
+        sf --version
+      fi
+    displayName: Ensure SF CLI Installed
+
+  # Make CLI available to later tasks in the job
+  - script: |
+      export PATH="$(SFCLI_DIR)/bin:$PATH"
+      echo "##vso[task.prependpath]$(SFCLI_DIR)/bin"
+      sf --version
+    displayName: Add SF CLI to PATH
+
+  # Verify npm cache contents (debugging)
+  - script: |
+      echo "Listing npm cache contents for debugging"
+      ls -la $(npm_config_cache)
+      du -sh $(npm_config_cache)
+    displayName: Verify npm cache contents
+
+  # Verify SF CLI folder (debugging)
+  - script: |
+      echo "Listing SF CLI folder contents"
+      ls -la $(SFCLI_DIR)
+      ls -la $(SFCLI_DIR)/bin
+    displayName: Verify SF CLI folder contents
+
+  # Run this only if it's *not* a PR (manual/CI/schedule) - this is dynamically determined
+  - task: run-salesforce-code-analyzer-dev@1
+    displayName: Run SFCA for Manual/CI/Scheduled
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      scanFullBranch: true
+      stopOnViolations: false
+      configFilePath: './config/code-analyzer-full.yml'
+      ruleSelector: 'Recommended'
+
+  # Run this only if it's a PR
+  - task: run-salesforce-code-analyzer-dev@1
+    displayName: Run SFCA for PR
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      stopOnViolations: true
+      useSeverityThreshold: true
+      severityThreshold: '3'
+      extensionsToScan: "cls|trigger|js|html|page|cmp|component|(?:page|cls|trigger|component|js|flow)-meta\\.xml"
+      postStatusCheckToPR: true
+      postCommentsToPR: true
+      configFilePath: './config/code-analyzer-full.yml'
+      ruleSelector: '(pmd,eslint)'
+      outputFileTypes: 'html,json,sarif'
+      postInlineCommentsToPR: true
+      maximumInlineCommentsPerPR: 101
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

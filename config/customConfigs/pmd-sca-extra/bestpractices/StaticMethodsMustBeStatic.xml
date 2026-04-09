@@ -1,0 +1,302 @@
+<?xml version="1.0" ?>
+<ruleset
+	name="Apex Best Practices Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd"
+>
+	<description>
+		Custom rules for Apex best practices (modifiers, test classes, code
+		quality)
+	</description>
+	<rule
+		name="StaticMethodsMustBeStatic"
+		language="apex"
+		message="Methods that do not use instance state must be declared as static. Any method that can be static without adding logic must be static"
+		class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+	>
+		<description>
+			Methods that do not use instance state should be declared as
+			static. Any
+			method that can be static without adding logic must be static. This makes
+			the method's independence from instance state explicit, improves
+			performance by avoiding unnecessary instance creation, and follows best
+			practices for method design.
+			
+			This rule excludes methods that access instance state, including:
+			- Instance fields (both regular fields and property fields), including when
+			used as arguments to constructors, method calls, or in nested expressions.
+			The rule correctly distinguishes between instance fields and local variables
+			with the same name.
+			- Method calls on instance fields (e.g., instanceField.method())
+			- Property access on instance fields (e.g., instanceField.property)
+			- Calls to other instance methods in the same class (e.g., buildContext())
+			- The 'this' keyword
+			- Methods that are part of property declarations
+			- Abstract methods, override methods, constructors, and inner class methods
+			
+			Note: The rule correctly handles cases where local variables shadow
+			instance fields - if an instance field is accessed before a local variable
+			with the same name is declared, the method is still excluded from the rule.
+
+			Version: 1.5.1
+		</description>
+		<priority>3</priority>
+		<properties>
+			<property name="xpath">
+				<value>
+					<![CDATA[
+					let $isInstanceField := function($fieldName, $context) {
+						$fieldName != 'this'
+						and not($context/ancestor::Method/Parameter[@Image = $fieldName])
+						and not(
+							$context/ancestor::BlockStatement//VariableDeclarationStatements
+							/VariableDeclaration[@Image = $fieldName]
+						)
+						and (
+							let $class := $context/ancestor::UserClass[1]
+							return exists(
+								$class//(Field | FieldDeclaration | Property/Field)[
+									@Name = $fieldName or @Image = $fieldName
+								]
+							)
+						)
+					},
+					$isInstanceMethodCall := function($methodCall, $currentMethod) {
+						let $receiver := $methodCall/ReferenceExpression[1]
+						return (
+							empty($receiver)
+							or $receiver/@Image = 'this'
+							or exists(
+								$receiver/ancestor::PrimaryExpression[ThisVariableExpression]
+							)
+						)
+						and exists(
+							$currentMethod/ancestor::UserClass[1]//Method[
+								(@Image = $methodCall/@MethodName
+								or @Image = $methodCall/@Image
+								or @MethodName = $methodCall/@MethodName
+								or @MethodName = $methodCall/@Image)
+								and not(ModifierNode[@Static = true()])
+								and not(@Constructor = true())
+								and not(ancestor::Property)
+							]
+						)
+					}
+					return //Method[
+						not(ModifierNode[@Static = true()])
+						and not(ModifierNode[@Abstract = true()])
+						and not(ModifierNode[@Override = true()])
+						and not(@Constructor = true())
+						and not(ancestor::UserClass[@Abstract = 'true'])
+						and not(ancestor::UserClass[ancestor::UserClass])
+						and not(ancestor::Property)
+						and not(BlockStatement//ThisVariableExpression)
+						and not(BlockStatement//PrimaryExpression[ThisVariableExpression])
+						and not(
+							some $varExpr in BlockStatement//VariableExpression
+							satisfies $isInstanceField($varExpr/@Image, $varExpr)
+						)
+						and not(
+							some $methodCall in BlockStatement//MethodCallExpression
+							satisfies (
+								$methodCall/ReferenceExpression[1]
+								and $isInstanceField(
+									$methodCall/ReferenceExpression[1]/@Image,
+									$methodCall/ReferenceExpression[1]
+								)
+							)
+						)
+						and not(
+							some $varExpr in BlockStatement//VariableExpression
+							satisfies (
+								$varExpr/ReferenceExpression
+								and $isInstanceField(
+									$varExpr/ReferenceExpression/@Image,
+									$varExpr/ReferenceExpression
+								)
+							)
+						)
+						and not(
+							some $methodCall in BlockStatement//MethodCallExpression
+							satisfies $isInstanceMethodCall($methodCall, .)
+						)
+					]
+					]]>
+				</value>
+			</property>
+		</properties>
+		<example>
+			<![CDATA[
+			// Violation: Method doesn't use instance state but not static
+			public class Utils {
+			    public Integer add(Integer a, Integer b) {  // ❌ Should be static
+			        return a + b;
+			    }
+			}
+			
+			// Valid: Method declared as static
+			public class Utils {
+			    public static Integer add(Integer a, Integer b) {  // ✅
+			        return a + b;
+			    }
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Method uses instance state (cannot be static)
+			public class Calculator {
+			    private Integer value;
+			    
+			    public Integer add(Integer a) {  // ✅ Uses instance state
+			        return this.value + a;
+			    }
+			}
+			
+			// Valid: Method uses instance field (cannot be static)
+			public class AccountService {
+			    private String accountId;
+			    
+			    public String getAccountId() {  // ✅ Uses instance field
+			        return accountId;
+			    }
+			}
+			
+			// Valid: Method uses property field (cannot be static)
+			public class Example {
+			    public Integer baseIndent { get; private set; }
+			    
+			    public Boolean hasBaseIndent() {  // ✅ Uses property field
+			        if (baseIndent == null) {
+			            return false;
+			        }
+			        return true;
+			    }
+			}
+			
+			// Valid: Method uses instance field in constructor argument (cannot be static)
+			public class BlockReader {
+			    private Config.Parser parserConfig;
+			    
+			    public List<List<String>> readBlocks(List<String> lines) {  // ✅ Uses instance field
+			        final Processor processor = new Processor(
+			            parserConfig,  // Instance field used as constructor argument
+			            baseIndent
+			        );
+			        return processor.process(lines);
+			    }
+			}
+			
+			// Valid: Method uses instance field in multi-line constructor (cannot be static)
+			public with sharing class ServiceClass {
+			    private Config config;
+			    
+			    public List<String> processData(List<String> items) {  // ✅ Uses instance field
+			        final Processor processor = new Processor(
+			            config,  // Instance field used as constructor argument
+			            10
+			        );
+			        return processor.process(items);
+			    }
+			}
+			
+			// Valid: Method calls on instance fields (cannot be static)
+			public class Renderer {
+			    private Evaluator evaluator;
+			    private Renderer renderer;
+			    
+			    public void process() {  // ✅ Calls method on instance field
+			        evaluator.process();
+			        renderer.render();
+			    }
+			    
+			    public Boolean isReady() {  // ✅ Calls method on instance field
+			        return evaluator.isReady();
+			    }
+			}
+			
+			// Valid: Property access on instance fields (cannot be static)
+			public class DataProcessor {
+			    private Config config;
+			    
+			    public String getPath() {  // ✅ Accesses property on instance field
+			        return config.path;
+			    }
+			    
+			    public void process() {  // ✅ Uses property access in method call
+			        processData(config.path, config.value);
+			    }
+			}
+			
+			// Valid: Mixed method calls and property access on instance fields (cannot be static)
+			public class ComplexProcessor {
+			    private Evaluator evaluator;
+			    private Renderer renderer;
+			    
+			    public void process() {  // ✅ Uses both method calls and property access
+			        if (evaluator.isReady()) {
+			            String path = evaluator.path;
+			            evaluator.process(path);
+			            renderer.render(evaluator.value);
+			        }
+			    }
+			}
+			
+			// Valid: Methods that call other instance methods in the same class (cannot be static)
+			public class Evaluator {
+			    private Config config;
+			    private Integer depth;
+			    
+			    private void buildContext(String key) {  // Instance method
+			        // Uses instance fields
+			        if (config != null && depth > 0) {
+			            // ...
+			        }
+			    }
+			    
+			    private Boolean isValid(String key) {  // Instance method
+			        // Uses instance fields
+			        return config != null && depth > 0;
+			    }
+			    
+			    public Boolean shouldFlatten(String key, Map<String, Object> map) {  // ✅ Calls instance methods
+			        buildContext(key);  // Calls instance method
+			        return isValid(key);  // Calls instance method
+			    }
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Abstract methods are excluded
+			public abstract class Base {
+			    public abstract void process();  // ✅ Abstract methods excluded
+			}
+			
+			// Valid: Override methods are excluded (cannot be static in Apex)
+			public class MyClass {
+			    public override String toString() {  // ✅ Override methods excluded
+			        return 'test';
+			    }
+			}
+			
+			// Valid: Constructors are excluded
+			public class MyClass {
+			    public MyClass() {  // ✅ Constructors excluded
+			        // ...
+			    }
+			}
+			
+			// Valid: Inner class methods are excluded
+			public class Outer {
+			    public class Inner {
+			        public void method() {  // ✅ Inner class methods excluded
+			            // ...
+			        }
+			    }
+			}
+			]]>
+		</example>
+	</rule>
+</ruleset>
