@@ -1,0 +1,121 @@
+<?xml version="1.0" ?>
+<ruleset
+	name="Apex Best Practices Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd"
+>
+	<description>
+		Custom rules for Apex best practices (modifiers, test classes, code
+		quality)
+	</description>
+	<rule
+		name="RegexPatternsMustBeStaticFinal"
+		language="apex"
+		message="Regular expression patterns must be declared as static final constants instead of inline for better performance and maintainability"
+		class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+	>
+		<description>
+			Regular expression patterns should be declared as static final
+			constants, not inline. This improves performance by avoiding
+			repeated pattern compilation, makes patterns reusable, and improves
+			maintainability by centralizing pattern definitions.
+
+			This rule applies to:
+			- Pattern.compile() and Pattern.matches() static methods
+			- String.split(), String.matches(), String.replaceAll(), and
+			String.replaceFirst() instance methods
+
+			For String replace operations, consider using the Matcher class
+			with a static final Pattern instead of String.replaceAll() or
+			String.replaceFirst() for better performance when the same pattern
+			is used multiple times.
+
+			Version: 1.1.0
+		</description>
+		<priority>2</priority>
+		<properties>
+			<property name="xpath">
+				<value>
+					<![CDATA[
+					//MethodCallExpression[
+						((@MethodName = 'compile' and @FullMethodName = 'Pattern.compile') or (@MethodName = 'matches' and @FullMethodName = 'Pattern.matches') or @MethodName = ('split', 'replaceAll', 'replaceFirst'))
+						and ./*[2][self::LiteralExpression[@String = true()]]
+						and not(ancestor::FieldDeclarationStatements[ModifierNode[@Static = true() and @Final = true()]])
+						and not(ancestor::Field[ModifierNode[@Static = true() and @Final = true()]])
+					]
+					]]>
+				</value>
+			</property>
+		</properties>
+		<example>
+			<![CDATA[
+			// Violation: Inline regex pattern in Pattern.matches()
+			public Boolean isValid(String input) {
+				return Pattern.matches('^[A-Z]+$', input);
+			}
+			
+			// Violation: Inline regex pattern in Pattern.compile()
+			public Boolean isValid(String input) {
+				Pattern pattern = Pattern.compile('^[A-Z]+$');
+				return pattern.matcher(input).matches();
+			}
+
+			// Violation: Inline regex pattern in String.replaceAll()
+			public String replaceDigits(String input) {
+				return input.replaceAll('\\d', 'X');
+			}
+
+			// Violation: Inline regex pattern in String.replaceFirst()
+			public String replaceFirstDigit(String input) {
+				return input.replaceFirst('\\d', 'X');
+			}
+
+			// Violation: Inline regex pattern in String.split()
+			public List<String> splitString(String input) {
+				return input.split(',');
+			}
+
+			// Violation: Inline regex pattern in String.matches()
+			public Boolean matchesPattern(String input) {
+				return input.matches('test.*');
+			}
+			
+			// Valid: Static final regex pattern
+			private static final String PATTERN = '^[A-Z]+$';
+			public Boolean isValid(String input) {
+				return Pattern.matches(PATTERN, input);
+			}
+			
+			// Valid: Static final regex pattern with Pattern.compile()
+			private static final String EMAIL_PATTERN = '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$';
+			public Boolean isValidEmail(String input) {
+				Pattern pattern = Pattern.compile(EMAIL_PATTERN);
+				return pattern.matcher(input).matches();
+			}
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Regex pattern already in static final field
+			private static final String VALIDATION_PATTERN = '^[0-9]+$';
+			public Boolean validate(String input) {
+				return Pattern.matches(VALIDATION_PATTERN, input);
+			}
+			
+			// Valid: Regex pattern in static final field declaration
+			private static final String PHONE_PATTERN = '^\\d{3}-\\d{3}-\\d{4}$';
+			public Boolean isValidPhone(String input) {
+				return Pattern.matches(PHONE_PATTERN, input);
+			}
+
+			// Valid: Using Matcher class with static final Pattern for replace operations
+			private static final Pattern DIGIT_PATTERN = Pattern.compile('\\d');
+			public String replaceDigits(String input) {
+				Matcher m = DIGIT_PATTERN.matcher(input);
+				return m.replaceAll('X');
+			}
+			]]>
+		</example>
+	</rule>
+</ruleset>

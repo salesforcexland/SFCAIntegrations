@@ -1,0 +1,124 @@
+<?xml version="1.0" ?>
+<ruleset
+	name="Apex Best Practices Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd"
+>
+	<description>
+		Custom rules for Apex best practices (modifiers, test classes, code
+		quality)
+	</description>
+	<rule
+		name="StaticVariablesMustBeFinalAndScreamingSnakeCase"
+		language="apex"
+		message="Static variables must be declared as final and use SCREAMING_SNAKE_CASE naming convention (uppercase letters, numbers, and underscores only)"
+		class="net.sourceforge.pmd.lang.rule.xpath.XPathRule"
+	>
+		<description>
+			All static variables must be declared as final and follow
+			SCREAMING_SNAKE_CASE naming convention (uppercase letters, numbers, and
+			underscores only). This enforces immutability for static variables and
+			follows the standard naming convention for constants, making them easily
+			identifiable in code.
+
+			According to Salesforce documentation, to define a constant, a variable
+			should be marked as both static and final. Static final variables can be
+			initialized either at the point of declaration or within static
+			initialization blocks.
+
+			This rule applies to static variables in both regular classes and static
+			classes. In static classes, all members must be static by definition, so
+			all variables must comply with this rule.
+
+			Version: 1.0.1
+		</description>
+		<priority>2</priority>
+		<properties>
+			<property name="xpath">
+				<value>
+					<![CDATA[
+					//FieldDeclaration[
+						let $modifiers := ancestor::FieldDeclarationStatements/ModifierNode
+						return $modifiers[@Static = true()]
+							and (not($modifiers[@Final = true()]) or not(matches(VariableExpression/@Image, '^[A-Z][A-Z0-9_]*$')))
+					]
+					]]>
+				</value>
+			</property>
+		</properties>
+		<example>
+			<![CDATA[
+			// Violation: Static variable not final
+			private static String DEFAULT_VALUE = 'test';
+			
+			// Violation: Static variable not in SCREAMING_SNAKE_CASE
+			private static final String defaultValue = 'test';
+			private static final String default_value = 'test';
+			private static final String DefaultValue = 'test';
+			
+			// Valid: Static final variable in SCREAMING_SNAKE_CASE
+			private static final String DEFAULT_VALUE = 'test';
+			private static final String MAX_RETRY_COUNT = 3;
+			private static final String API_BASE_URL = 'https://api.example.com';
+			private static final Integer DEFAULT_TIMEOUT = 30;
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Valid: Static final variables with numbers and underscores
+			private static final String CONFIG_KEY_1 = 'key1';
+			private static final Integer MAX_SIZE_2X = 200;
+			private static final String API_V2_ENDPOINT = '/api/v2';
+			
+			// Valid: Static variables in static classes (all members must be static)
+			public static class UtilityClass {
+				public static final String API_VERSION = 'v1';
+				private static final Integer MAX_RETRIES = 3;
+			}
+			
+			// Valid: Different access modifiers
+			public static final String PUBLIC_CONSTANT = 'public';
+			protected static final String PROTECTED_CONSTANT = 'protected';
+			global static final String GLOBAL_CONSTANT = 'global';
+			
+			// Valid: Static final variable initialized in static block
+			private static final String INITIALIZED_CONSTANT;
+			static {
+				INITIALIZED_CONSTANT = 'initialized';
+			}
+			
+			// Violation: Mixed case or lowercase
+			private static final String configKey = 'key';  // ❌ Not SCREAMING_SNAKE_CASE
+			private static final String ConfigKey = 'key';  // ❌ Not SCREAMING_SNAKE_CASE
+			private static final String config_key = 'key';  // ❌ Not SCREAMING_SNAKE_CASE
+			]]>
+		</example>
+		<example>
+			<![CDATA[
+			// Violation: Additional naming violations
+			private static final String a_CONSTANT = 'a';  // ❌ Starts with lowercase
+			private static final String CONSTANT_value = 'test';  // ❌ Lowercase in middle
+			private static final String Mixed_Case = 'value';  // ❌ Mixed case with underscore
+			
+			// Violation: Static but not final with different access modifiers
+			public static String publicNotFinal = 'public';  // ❌ Not final
+			protected static Integer protectedNotFinal = 5;  // ❌ Not final
+			global static Boolean globalNotFinal = true;  // ❌ Not final
+			
+			// Valid: Single uppercase letter (edge case)
+			private static final String A = 'a';
+			private static final Integer X = 1;
+			
+			// Valid: Multiple underscores
+			private static final String API__VERSION__V2 = 'v2';
+			
+			// Valid: Different data types
+			private static final Long MAX_SIZE = 1000L;
+			private static final Decimal MAX_AMOUNT = 1000.50;
+			private static final Boolean IS_ACTIVE = true;
+			private static final Date START_DATE = Date.today();
+			]]>
+		</example>
+	</rule>
+</ruleset>

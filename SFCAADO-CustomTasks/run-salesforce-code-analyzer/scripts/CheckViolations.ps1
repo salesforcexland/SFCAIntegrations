@@ -36,6 +36,7 @@ if (Test-Path $JSONOutputFilePath) {
     }
     # If we're using severity threshold, but the exit code is 0 from the scanner (meaning we haven't exceeded), then by default we can't be exceeding the total
     elseif (($env:USE_SEVERITY_THRESHOLD -eq "true") -and ($env:SFScanExitCode -eq 0)) {
+        $env:thresholdViolations = 0
         Write-Host "Violations '$env:totalViolations' found do not exceed the severity specified build allow to pass."
     }
     # If we're not using severity threshold, and the total violations found exceeds the maximum violations (defaulted to 10), we fail

@@ -120,19 +120,88 @@ Write-Host "---- PR Commenting Section ----"
 # Set the base ADO comment URI up for use in inline comments and/or summary
 $commentURI = "$collectionUri$escapedProject/_apis/git/repositories/$repositoryId/pullRequests/$pullRequestId/threads?api-version=7.1"
 Write-Host "Checking if we were passed in the flag to leave inline comments on the PR (ADO ONLY)"
-# Only for ADO for now
+# Inline comments only for ADO for now
 if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")) { 
-    $MaximumPRComments = 20 # TODO: Magic number here - probably not expose as an inbound param due to limits/overloading, but be aware
-    Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - current max number of comments is '$MaximumPRComments'"
+    # Attempt to cast to int. If it's not a number, it will throw an error.
+    [int]$parsedValue = 0
+    if ([int]::TryParse($MAXIMUM_INLINE_COMMENTS_PER_PR, [ref]$parsedValue) -and $parsedValue -ge 1) {
+        $MaximumPRComments = $parsedValue
+    } else {
+        Write-Host "Input '$MAXIMUM_INLINE_COMMENTS_PER_PR' is invalid or less than 1. Defaulting to 20."
+        Write-Host "If you want to disable inline comments, set POST_INLINE_COMMENTS_TO_PR to false"
+        $MaximumPRComments = 20
+    }
+
+    # Hard-cap it in code so they can't spam the API
+    if ($MaximumPRComments -gt 100) { 
+        Write-Warning "Comment number provided '$MaximumPRComments' is over 100 - hard capping at 100 to prevent potential API overload. If you have more violations than this, consider using the summary comment and artefacts to share details instead of inline comments."
+        $MaximumPRComments = 100 
+    }
+
+    Write-Host "Looking to leave inline comments on the ADO PR for the relevant violations - reasoned max number of comments is '$MaximumPRComments'"
     Write-Host "Repo root is: '$env:BUILD_SOURCESDIRECTORY' - need to switch this to repo relative paths and construct the comments"
+    Write-Host "Checking existing comments first so we don't write duplicates and overload the PR"
+
+    $existingThreads = (Invoke-RestMethod -Uri "$commentURI" -Headers $headers -Method Get).value
+    Write-Host "Found '$($existingThreads.Count)' existing threads on PR '$($pullRequestId)'. Making a hashset to compare against"
+    $existingComments = @{}
+    Write-Host "🔍 Building existing comment lookup..."
+    foreach ($thread in $existingThreads) {
+        if ($null -eq $thread.threadContext -or
+            $null -eq $thread.threadContext.filePath -or
+            $null -eq $thread.threadContext.rightFileStart) {
+            Write-Host "ℹ️ Skipping thread not linked to a file/line (ID: $($thread.id)) - likely a summary comment or general comment on the PR as a whole"
+            continue
+        }
+
+        $path = "/" + $thread.threadContext.filePath.TrimStart('/')
+        $line = [int]$thread.threadContext.rightFileStart.line
+        $fileLineKey = "$($path.ToLower())|$line"
+
+        foreach ($comment in $thread.comments) {
+            Write-Host "   💬 Raw comment for $($thread.id): ${path}:$line :$($comment.content)"
+            if ($comment.content -match "Rule:\s*(.*?)\s*-\s*Message:") {
+                $rule = $matches[1].Trim().ToLower()
+                Write-Host "   ✅ Extracted rule from existing comment: '$rule' - adding to existingComments array"
+
+                # Add rule to existingComments hashset
+                if (-not $existingComments.ContainsKey($fileLineKey)) {
+                    $existingComments[$fileLineKey] = @()
+                }
+                $existingComments[$fileLineKey] += $rule
+            }
+        }
+    }
+
+    #Write-Host "📘 Final existingComments map:"
+    #foreach ($key in $existingComments.Keys) {
+    #    Write-Host "   $key => $($existingComments[$key] -join ', ')"
+    #}
+
     $commentCounter = 0 # Count how many comments we POST, and use a hard limit to prevent overloading the PR
     foreach ($violation in $violationsInPR) {
-        $msg = "$($violation.rule): $($violation.message)"
-        $filePath = $violation.locations[0].file
-        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
-        $line = $violation.locations[0].startLine
+        $engine  = $violation.engine
+        $rule    = $violation.rule
+        $message = $violation.message
 
-        $messageContent = "⚠️ Engine: " + $violation.engine + " - Message: " + $msg
+        $filePath     = $violation.locations[0].file
+        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
+        $line         = [int]$violation.locations[0].startLine
+
+        $pathWithSlash = "/" + $relativePath.TrimStart('/')
+        $line = [int]$line
+        $fileLineKey = "$($pathWithSlash.ToLower())|$line"
+        $ruleLower = $rule.ToLower()
+
+        # 🚫 Skip if duplicate
+        if ($existingComments.ContainsKey($fileLineKey) -and $existingComments[$fileLineKey] -contains $ruleLower) {
+            $duplicateCommentHit = $true
+            Write-Host "   ⏭️ Existing rule comment on this line: $($existingComments[$fileLineKey] -join ', ') - skipping duplicate"
+            continue
+        }
+
+        # Construct the relevant inline comment including key information on engine/rule/message and resources (if applicable)
+        $messageContent = "⚠️ Engine: " + $engine + " - Rule: " + $rule + " - Message: " + $message
         if ($null -ne $violation.resources) {
             $messageContent += " - Relevant resource: $($violation.resources)"
         }
@@ -151,16 +220,17 @@ if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")
         } | ConvertTo-Json -Depth 5
 
         try {
-            Write-Host "Posting comment '$messageContent' to URL: '$commentURI'"
             $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
             $commentCounter++
-
-            if ($REPO_PROVIDER -eq "TfsGit") {
-                Write-Host "✅ Posted PR comment (Thread ID: $($response.id)) — $($violation.rule)"
-            }
+            Write-Host "✅ Posted PR comment (Thread ID: $($response.id)) — $messageContent"
         } catch {
             Write-Warning "Failed to post PR comment: $_"
         }
+
+        # Adding to existingComments list so we don't dupe on the same run, if it's not empty
+        if ($null -ne $key -and $key -ne '') {
+            $existingComments[$key] = $true
+        } 
 
         if ($commentCounter -ge $MaximumPRComments) { #
             $MaximumPRCommentsReached = $true # use this in the summary later
@@ -219,11 +289,32 @@ $commentText = @"
     - There were **$env:totalViolations** found in total
 "@
         }
-        if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and $MaximumPRCommentsReached -eq $true) { # This is a mess of trues due to the awkward ADO env vars
+        if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and $MaximumPRCommentsReached -eq $true -and $duplicateCommentHit -eq $true) {
+            Write-Host "Inline comments is true, we found duplicates and we surpassed the threshold of '$MaximumPRComments' comments, so adding in a note"
+            $commentText += @"
+
+- 📝 **Inline comments** were turned on for this run and are listed below, but only up to the maximum count of **'$MaximumPRComments'** provided, on top of any duplicates, so see the artefacts for further details.
+"@
+        }
+        elseif($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and $MaximumPRCommentsReached -eq $true) { # This is a mess of trues due to the awkward ADO env vars
             Write-Host "Inline comments is true and we surpassed the threshold of '$MaximumPRComments' comments, so adding in a note"
             $commentText += @"
 
-- 📝 **Inline comments** were turned on for this run and they will be listed below, but only up to a maximum count of '$MaximumPRComments', so see the artefacts for further specifics
+- 📝 **Inline comments** were turned on for this run and are listed below, but only up to the maximum count of **'$MaximumPRComments'** provided, so see the artefacts for further details.
+"@
+        }
+        elseif($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and $duplicateCommentHit -eq $true) { # If we've hit any duplicates, reference that
+            Write-Host "Inline comments is true and we hit some duplicates, so adding in a specific note"
+            $commentText += @"
+
+- 📝 **Inline comments** were turned on for this run and are listed below, but some comments already existed from prior runs, so skipped those duplicates.
+"@
+        }
+        elseif($env:POST_INLINE_COMMENTS_TO_PR -eq 'true') { # if we've not hit duplicates or max comments, leave a standard note for inline comments
+            Write-Host "Inline comments is true, with no duplicates or max comments hit, so adding in a note"
+            $commentText += @"
+
+- 📝 **Inline comments** were turned on for this run and are listed below for each new violation.
 "@
         }
     }
@@ -234,8 +325,6 @@ $commentText = @"
 
 > 💡 _See the full report here - [Published artifacts]($publishedArtefactURL)._
 "@
-
-
     # Provider-specific config
     switch ($REPO_PROVIDER) {
         "TfsGit" {
@@ -274,11 +363,11 @@ $commentText = @"
 
     # Post comment
     try {
-        Write-Host "Posting comment to $REPO_PROVIDER PR at URL: $commentURI"
+        Write-Host "Posting summary comment to $REPO_PROVIDER PR at URL: $commentURI"
         $response = Invoke-RestMethod -Uri $commentURI -Method Post -Headers $headers -Body $commentBody -ErrorAction Stop
 
         if ($REPO_PROVIDER -eq "TfsGit") {
-            Write-Host "Successfully posted PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
+            Write-Host "Successfully posted summary PR comment (Thread ID: $($response.id), Status: $($response.status), Comment: $($response.comments[0].content))"
         }
         elseif ($REPO_PROVIDER -eq "GitHub") {
             Write-Host "Successfully posted GitHub PR comment: $($response.html_url)"
