@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 ### Changed
 ### Fixed 
-- Dynamically resolves $AGENT_BUILDDIRECTORY instead of hardcoding /home/vsts/ for Ubuntu 24.04/26.04 compatibility as part of the PR commenting/tech debt analysis. Raised and fixed by @DaRosenberg as part of Issue #29
+- Dynamically resolves $AGENT_BUILDDIRECTORY instead of hardcoding /home/vsts/ for Ubuntu 24.04/26.04 compatibility as part of the PR commenting/tech debt analysis. Issue ticket ([#29](https://github.com/salesforcexland/SFCAIntegrations/issues/29)) — thanks [@DaRosenberg](https://github.com/DaRosenberg)!
 
 ## [1.5.0] - 2026-04-09
 
