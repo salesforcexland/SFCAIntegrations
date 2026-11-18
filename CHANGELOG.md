@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.5.0] - 2026-04-XX
+## [1.5.1] - 2026-11-18
+
+### Added
+- Defensive checks in case an engine is mistyped and the SFCA scanner command runs with 0 engines, with an ADO warning provided
+### Changed
+### Fixed 
+- Dynamically resolves $AGENT_BUILDDIRECTORY instead of hardcoding /home/vsts/ for Ubuntu 24.04/26.04 compatibility as part of the PR commenting/tech debt analysis. Issue ticket ([#29](https://github.com/salesforcexland/SFCAIntegrations/issues/29)) — thanks [@DaRosenberg](https://github.com/DaRosenberg)!
+
+## [1.5.0] - 2026-04-09
 
 ### Added
 - Parameter for maximum number of inline comments (instead of a magic number, up to a hard limit of 100)

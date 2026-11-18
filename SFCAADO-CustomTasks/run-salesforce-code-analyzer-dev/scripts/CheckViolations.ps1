@@ -7,6 +7,14 @@ if (Test-Path $JSONOutputFilePath) {
     # Load the JSON and grab total violations
     $SFCAResultJSON = Get-Content $JSONOutputFilePath -Raw | ConvertFrom-Json
     $env:totalViolations = $SFCAResultJSON.violationCounts.total
+    # Warn in ADO if 0 scanning engines actually executed (common when ruleSelector has a typo)
+    $executedEngines = @()
+    if ($SFCAResultJSON.versions) { # Check for versions in the json output which should list which engines booted up as part of the scan
+        $executedEngines = @($SFCAResultJSON.versions.PSObject.Properties.Name | Where-Object { $_ -ne "code-analyzer" })
+    }
+    if ($executedEngines.Count -eq 0) {
+        Write-Host "##vso[task.logissue type=warning]Salesforce Code Analyzer executed with 0 scanning engines/rules. Verify your 'ruleSelector' and 'code-analyzer.yml' configuration."
+    }
     Write-Warning "Grabbed the total violations from the JSON as: '$env:totalViolations'"
 
     # Only proceed if we've got more than 1 violation, the SF exit code isn't 0, and use_severity_threshold is true, so we can find the violations
