@@ -63,6 +63,12 @@ if ($POST_STATUS_CHECK_TO_PR -eq "true") {
     }
 }
 Write-Host "---- Metrics section ----"
+# Scanned files are reported with absolute paths on the agent (e.g '/home/vsts/work/1/a/...' or '/home/runner/work/1/a/...'), so build the
+# prefix to strip from the agent's own build directory rather than assuming where the work folder lives, falling back to the previous default
+$agentBuildDirectory = if ($env:AGENT_BUILDDIRECTORY) { [regex]::Escape($env:AGENT_BUILDDIRECTORY.TrimEnd('/')) } else { "/home/vsts/work/[0-9]+" }
+$agentPathPrefix = "^$agentBuildDirectory/[as]/"
+Write-Host "Using '$agentPathPrefix' to convert scanned file paths into repo relative paths"
+
 # Work out the distribution of new vs existing issues across the files involved in the PR, for inline commenting (if selected) and metrics
 function Get-ViolationDistribution {
     param (
@@ -82,7 +88,7 @@ function Get-ViolationDistribution {
 
     foreach ($violation in $SFCAResultJSON.violations) {
         $filePath = $violation.locations[0].file
-        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
+        $relativePath = $filePath -replace $agentPathPrefix, ""
         $line = $violation.locations[0].startLine
 
         if (($changedLinesPerFile.PSObject.Properties.Name -contains $relativePath) -and
@@ -185,7 +191,7 @@ if($env:POST_INLINE_COMMENTS_TO_PR -eq 'true' -and ($REPO_PROVIDER -eq "TfsGit")
         $message = $violation.message
 
         $filePath     = $violation.locations[0].file
-        $relativePath = $filePath -replace "^/home/vsts/work/[0-9]+/[as]/", ""
+        $relativePath = $filePath -replace $agentPathPrefix, ""
         $line         = [int]$violation.locations[0].startLine
 
         $pathWithSlash = "/" + $relativePath.TrimStart('/')
